@@ -1,0 +1,10 @@
+node_modules
+dist
+out
+*.tsbuildinfo
+*.log
+.DS_Store
+.env
+.env.local
+# App data / secrets (OAuth tokens, local DB) live in Electron userData, not the repo
+data/
