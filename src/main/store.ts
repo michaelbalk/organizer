@@ -55,6 +55,7 @@ class Store {
     data.workspaces ??= []
     data.accounts ??= []
     data.tasks ??= []
+    data.dismissedEmails ??= []
     return data
   }
 
@@ -72,7 +73,8 @@ class Store {
       version: DATA_VERSION,
       workspaces: [personal],
       accounts: [],
-      tasks: []
+      tasks: [],
+      dismissedEmails: []
     }
     this.data = seeded
     this.persist()
@@ -154,6 +156,31 @@ class Store {
     const changed = this.data.accounts.length !== before
     if (changed) this.persist()
     return changed
+  }
+
+  // --- Inbox triage (local dismissed state) -------------------------------
+
+  dismissEmail(emailId: string): void {
+    if (!this.data.dismissedEmails.includes(emailId)) {
+      this.data.dismissedEmails.push(emailId)
+      this.persist()
+    }
+  }
+
+  undismissEmail(emailId: string): void {
+    const before = this.data.dismissedEmails.length
+    this.data.dismissedEmails = this.data.dismissedEmails.filter((id) => id !== emailId)
+    if (this.data.dismissedEmails.length !== before) this.persist()
+  }
+
+  /** Drop dismissed ids that are no longer in the live inbox, keeping the set small. */
+  pruneDismissedEmails(liveIds: string[]): void {
+    const live = new Set(liveIds)
+    const kept = this.data.dismissedEmails.filter((id) => live.has(id))
+    if (kept.length !== this.data.dismissedEmails.length) {
+      this.data.dismissedEmails = kept
+      this.persist()
+    }
   }
 
   // --- Tasks --------------------------------------------------------------

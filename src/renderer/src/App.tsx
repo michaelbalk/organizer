@@ -6,6 +6,7 @@ import { TaskModal } from './components/TaskModal'
 import { WorkspaceModal } from './components/WorkspaceModal'
 import { Placeholder } from './components/Placeholder'
 import { Accounts } from './components/Accounts'
+import { Inbox } from './components/Inbox'
 
 export type View = 'board' | 'email' | 'calendar' | 'settings'
 
@@ -15,7 +16,13 @@ export type Selection =
   | { type: 'kind'; kind: 'personal' | 'business' }
   | { type: 'workspace'; workspaceId: string }
 
-const EMPTY: AppData = { version: 1, workspaces: [], accounts: [], tasks: [] }
+const EMPTY: AppData = {
+  version: 1,
+  workspaces: [],
+  accounts: [],
+  tasks: [],
+  dismissedEmails: []
+}
 
 export default function App(): JSX.Element {
   const [data, setData] = useState<AppData>(EMPTY)
@@ -138,10 +145,14 @@ export default function App(): JSX.Element {
             />
           )}
           {view === 'email' && (
-            <Placeholder
-              icon="✉️"
-              title="Unified Inbox — coming in Phase 2"
-              body="Connect your Gmail accounts to see all mail in one place, and turn any message into a task with one click."
+            <Inbox
+              accounts={data.accounts}
+              workspaces={data.workspaces}
+              workspaceById={workspaceById}
+              tasks={data.tasks}
+              dismissedEmails={data.dismissedEmails}
+              onChanged={refresh}
+              onGoToSettings={() => setView('settings')}
             />
           )}
           {view === 'calendar' && (

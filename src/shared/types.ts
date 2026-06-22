@@ -74,12 +74,48 @@ export const TASK_PRIORITIES: { id: TaskPriority; label: string; color: string }
   { id: 'urgent', label: 'Urgent', color: '#dc2626' }
 ]
 
+/** A single email surfaced in the unified inbox (read-only projection of Gmail). */
+export interface EmailItem {
+  /** Gmail message id. */
+  id: string
+  threadId: string
+  accountId: string
+  accountEmail: string
+  /** Workspace inherited from the owning account, for color-coding. */
+  workspaceId: string
+  /** Sender display name (falls back to the address). */
+  from: string
+  fromEmail: string
+  subject: string
+  snippet: string
+  /** ISO timestamp (from Gmail internalDate). */
+  date: string
+  unread: boolean
+}
+
+/** Result of fetching the unified inbox: messages plus any per-account failures. */
+export interface InboxResult {
+  emails: EmailItem[]
+  errors: InboxError[]
+  fetchedAt: string
+}
+
+export interface InboxError {
+  accountId: string
+  accountEmail: string
+  message: string
+  /** True when the fix is to re-authenticate the account. */
+  needsReconnect: boolean
+}
+
 /** Full persisted application state. */
 export interface AppData {
   version: number
   workspaces: Workspace[]
   accounts: Account[]
   tasks: Task[]
+  /** Gmail message ids the user has triaged/dismissed locally (pruned to live inbox). */
+  dismissedEmails: string[]
 }
 
 /** Payload shapes for creating/updating tasks from the renderer. */

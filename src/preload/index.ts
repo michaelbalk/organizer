@@ -3,6 +3,7 @@ import { IPC } from '@shared/ipc'
 import type {
   Account,
   AppData,
+  InboxResult,
   NewTaskInput,
   NewWorkspaceInput,
   Task,
@@ -37,7 +38,17 @@ const api = {
     ipcRenderer.invoke(IPC.disconnectAccount, id),
   removeAccount: (id: string): Promise<boolean> => ipcRenderer.invoke(IPC.removeAccount, id),
   updateAccount: (id: string, patch: Partial<Account>): Promise<Account | null> =>
-    ipcRenderer.invoke(IPC.updateAccount, id, patch)
+    ipcRenderer.invoke(IPC.updateAccount, id, patch),
+
+  // Inbox
+  listInbox: (maxPerAccount?: number): Promise<InboxResult> =>
+    ipcRenderer.invoke(IPC.listInbox, maxPerAccount),
+  openEmail: (accountEmail: string, messageId: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.openEmail, accountEmail, messageId),
+  dismissEmail: (emailId: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.dismissEmail, emailId),
+  undismissEmail: (emailId: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.undismissEmail, emailId)
 }
 
 export type OrganizerApi = typeof api

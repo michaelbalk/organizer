@@ -15,7 +15,12 @@ export const IPC = {
   connectAccount: 'account:connect',
   disconnectAccount: 'account:disconnect',
   removeAccount: 'account:remove',
-  updateAccount: 'account:update'
+  updateAccount: 'account:update',
+  // Inbox
+  listInbox: 'inbox:list',
+  openEmail: 'inbox:open',
+  dismissEmail: 'inbox:dismiss',
+  undismissEmail: 'inbox:undismiss'
 } as const
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC]

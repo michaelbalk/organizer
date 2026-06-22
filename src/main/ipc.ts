@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron'
+import { ipcMain, shell } from 'electron'
 import { IPC } from '@shared/ipc'
 import { getStore } from './store'
 import { isGoogleConfigured } from './config'
@@ -7,6 +7,7 @@ import {
   disconnectGoogleAccount,
   removeGoogleAccount
 } from './google/accounts'
+import { listInbox, gmailMessageUrl } from './google/gmail'
 import type { Account, NewTaskInput, NewWorkspaceInput, TaskPatch, Workspace } from '@shared/types'
 
 /** Register all IPC handlers. Called once after the app is ready. */
@@ -46,4 +47,12 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.updateAccount, (_e, id: string, patch: Partial<Account>) =>
     store.updateAccount(id, patch)
   )
+
+  // Inbox
+  ipcMain.handle(IPC.listInbox, (_e, maxPerAccount?: number) => listInbox(maxPerAccount))
+  ipcMain.handle(IPC.openEmail, (_e, accountEmail: string, messageId: string) =>
+    shell.openExternal(gmailMessageUrl(accountEmail, messageId))
+  )
+  ipcMain.handle(IPC.dismissEmail, (_e, emailId: string) => store.dismissEmail(emailId))
+  ipcMain.handle(IPC.undismissEmail, (_e, emailId: string) => store.undismissEmail(emailId))
 }
