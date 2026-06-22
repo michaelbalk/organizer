@@ -9,7 +9,13 @@ export const IPC = {
   createTask: 'task:create',
   updateTask: 'task:update',
   deleteTask: 'task:delete',
-  reorderTask: 'task:reorder'
+  reorderTask: 'task:reorder',
+  // Accounts / Google OAuth
+  googleConfigured: 'google:configured',
+  connectAccount: 'account:connect',
+  disconnectAccount: 'account:disconnect',
+  removeAccount: 'account:remove',
+  updateAccount: 'account:update'
 } as const
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC]

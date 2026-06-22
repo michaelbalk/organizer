@@ -89,3 +89,9 @@ export type NewTaskInput = Pick<Task, 'title'> &
 export type TaskPatch = Partial<Omit<Task, 'id' | 'createdAt'>>
 
 export type NewWorkspaceInput = Pick<Workspace, 'name' | 'kind'> & Partial<Pick<Workspace, 'color'>>
+
+export type NewAccountInput = Pick<
+  Account,
+  'provider' | 'email' | 'displayName' | 'workspaceId'
+> &
+  Partial<Pick<Account, 'connected'>>

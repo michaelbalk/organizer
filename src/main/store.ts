@@ -3,7 +3,9 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from '
 import { join } from 'path'
 import { randomUUID } from 'crypto'
 import type {
+  Account,
   AppData,
+  NewAccountInput,
   NewTaskInput,
   NewWorkspaceInput,
   Task,
@@ -117,6 +119,39 @@ class Store {
     // Tasks in a deleted workspace are removed too.
     this.data.tasks = this.data.tasks.filter((t) => t.workspaceId !== id)
     const changed = this.data.workspaces.length !== before
+    if (changed) this.persist()
+    return changed
+  }
+
+  // --- Accounts -----------------------------------------------------------
+
+  addAccount(input: NewAccountInput): Account {
+    const account: Account = {
+      id: randomUUID(),
+      provider: input.provider,
+      email: input.email,
+      displayName: input.displayName,
+      workspaceId: input.workspaceId,
+      connected: input.connected ?? false,
+      createdAt: new Date().toISOString()
+    }
+    this.data.accounts.push(account)
+    this.persist()
+    return account
+  }
+
+  updateAccount(id: string, patch: Partial<Account>): Account | null {
+    const account = this.data.accounts.find((a) => a.id === id)
+    if (!account) return null
+    Object.assign(account, patch, { id: account.id, createdAt: account.createdAt })
+    this.persist()
+    return account
+  }
+
+  removeAccount(id: string): boolean {
+    const before = this.data.accounts.length
+    this.data.accounts = this.data.accounts.filter((a) => a.id !== id)
+    const changed = this.data.accounts.length !== before
     if (changed) this.persist()
     return changed
   }

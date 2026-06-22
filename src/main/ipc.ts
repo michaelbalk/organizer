@@ -1,7 +1,13 @@
 import { ipcMain } from 'electron'
 import { IPC } from '@shared/ipc'
 import { getStore } from './store'
-import type { NewTaskInput, NewWorkspaceInput, TaskPatch, Workspace } from '@shared/types'
+import { isGoogleConfigured } from './config'
+import {
+  connectGoogleAccount,
+  disconnectGoogleAccount,
+  removeGoogleAccount
+} from './google/accounts'
+import type { Account, NewTaskInput, NewWorkspaceInput, TaskPatch, Workspace } from '@shared/types'
 
 /** Register all IPC handlers. Called once after the app is ready. */
 export function registerIpc(): void {
@@ -28,5 +34,16 @@ export function registerIpc(): void {
     IPC.reorderTask,
     (_e, id: string, status: TaskPatch['status'], toIndex: number) =>
       store.reorderTask(id, status!, toIndex)
+  )
+
+  // Accounts / Google OAuth
+  ipcMain.handle(IPC.googleConfigured, () => isGoogleConfigured())
+  ipcMain.handle(IPC.connectAccount, (_e, workspaceId: string) =>
+    connectGoogleAccount(workspaceId)
+  )
+  ipcMain.handle(IPC.disconnectAccount, (_e, id: string) => disconnectGoogleAccount(id))
+  ipcMain.handle(IPC.removeAccount, (_e, id: string) => removeGoogleAccount(id))
+  ipcMain.handle(IPC.updateAccount, (_e, id: string, patch: Partial<Account>) =>
+    store.updateAccount(id, patch)
   )
 }

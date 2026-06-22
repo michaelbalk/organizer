@@ -23,6 +23,8 @@
     "vite": "^5.4.11"
   },
   "dependencies": {
+    "dotenv": "^17.4.2",
+    "google-auth-library": "^10.7.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   }

@@ -5,8 +5,9 @@ import { Board } from './components/Board'
 import { TaskModal } from './components/TaskModal'
 import { WorkspaceModal } from './components/WorkspaceModal'
 import { Placeholder } from './components/Placeholder'
+import { Accounts } from './components/Accounts'
 
-export type View = 'board' | 'email' | 'calendar'
+export type View = 'board' | 'email' | 'calendar' | 'settings'
 
 /** Sidebar selection: all tasks, a kind group, or a single workspace. */
 export type Selection =
@@ -60,11 +61,14 @@ export default function App(): JSX.Element {
   }, [data.tasks, selection, search, workspaceById])
 
   const headingTitle = useMemo(() => {
+    if (view === 'email') return 'Inbox'
+    if (view === 'calendar') return 'Calendar'
+    if (view === 'settings') return 'Settings'
     if (selection.type === 'all') return 'All Tasks'
     if (selection.type === 'kind')
       return selection.kind === 'personal' ? 'Personal' : 'Business'
     return workspaceById.get(selection.workspaceId)?.name ?? 'Tasks'
-  }, [selection, workspaceById])
+  }, [view, selection, workspaceById])
 
   const openNewTask = useCallback(() => {
     setTaskModal({ open: true, task: null })
@@ -100,7 +104,9 @@ export default function App(): JSX.Element {
                 ? `${visibleTasks.length} task${visibleTasks.length === 1 ? '' : 's'}`
                 : view === 'email'
                   ? 'Unified inbox'
-                  : 'Combined calendar'}
+                  : view === 'calendar'
+                    ? 'Combined calendar'
+                    : 'Accounts & settings'}
             </span>
           </div>
 
@@ -113,9 +119,11 @@ export default function App(): JSX.Element {
                 onChange={(e) => setSearch(e.target.value)}
               />
             )}
-            <button className="btn btn-primary" onClick={openNewTask}>
-              + New Task
-            </button>
+            {view === 'board' && (
+              <button className="btn btn-primary" onClick={openNewTask}>
+                + New Task
+              </button>
+            )}
           </div>
         </header>
 
@@ -141,6 +149,13 @@ export default function App(): JSX.Element {
               icon="📅"
               title="Combined Calendar — coming in Phase 2"
               body="Overlay every Google Calendar across your personal and business accounts, color-coded by workspace."
+            />
+          )}
+          {view === 'settings' && (
+            <Accounts
+              accounts={data.accounts}
+              workspaces={data.workspaces}
+              onChanged={refresh}
             />
           )}
         </section>

@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '@shared/ipc'
 import type {
+  Account,
   AppData,
   NewTaskInput,
   NewWorkspaceInput,
@@ -26,7 +27,17 @@ const api = {
     ipcRenderer.invoke(IPC.updateTask, id, patch),
   deleteTask: (id: string): Promise<boolean> => ipcRenderer.invoke(IPC.deleteTask, id),
   reorderTask: (id: string, status: TaskStatus, toIndex: number): Promise<Task | null> =>
-    ipcRenderer.invoke(IPC.reorderTask, id, status, toIndex)
+    ipcRenderer.invoke(IPC.reorderTask, id, status, toIndex),
+
+  // Accounts / Google OAuth
+  isGoogleConfigured: (): Promise<boolean> => ipcRenderer.invoke(IPC.googleConfigured),
+  connectAccount: (workspaceId: string): Promise<Account> =>
+    ipcRenderer.invoke(IPC.connectAccount, workspaceId),
+  disconnectAccount: (id: string): Promise<boolean> =>
+    ipcRenderer.invoke(IPC.disconnectAccount, id),
+  removeAccount: (id: string): Promise<boolean> => ipcRenderer.invoke(IPC.removeAccount, id),
+  updateAccount: (id: string, patch: Partial<Account>): Promise<Account | null> =>
+    ipcRenderer.invoke(IPC.updateAccount, id, patch)
 }
 
 export type OrganizerApi = typeof api
