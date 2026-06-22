@@ -7,7 +7,7 @@ import {
   disconnectGoogleAccount,
   removeGoogleAccount
 } from './google/accounts'
-import { listInbox, gmailMessageUrl } from './google/gmail'
+import { listInbox, gmailThreadUrl } from './google/gmail'
 import type { Account, NewTaskInput, NewWorkspaceInput, TaskPatch, Workspace } from '@shared/types'
 
 /** Register all IPC handlers. Called once after the app is ready. */
@@ -50,8 +50,8 @@ export function registerIpc(): void {
 
   // Inbox
   ipcMain.handle(IPC.listInbox, (_e, maxPerAccount?: number) => listInbox(maxPerAccount))
-  ipcMain.handle(IPC.openEmail, (_e, accountEmail: string, messageId: string) =>
-    shell.openExternal(gmailMessageUrl(accountEmail, messageId))
+  ipcMain.handle(IPC.openEmail, (_e, accountEmail: string, threadId: string) =>
+    shell.openExternal(gmailThreadUrl(accountEmail, threadId))
   )
   ipcMain.handle(IPC.dismissEmail, (_e, emailId: string) => store.dismissEmail(emailId))
   ipcMain.handle(IPC.undismissEmail, (_e, emailId: string) => store.undismissEmail(emailId))

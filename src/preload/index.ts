@@ -43,8 +43,8 @@ const api = {
   // Inbox
   listInbox: (maxPerAccount?: number): Promise<InboxResult> =>
     ipcRenderer.invoke(IPC.listInbox, maxPerAccount),
-  openEmail: (accountEmail: string, messageId: string): Promise<void> =>
-    ipcRenderer.invoke(IPC.openEmail, accountEmail, messageId),
+  openEmail: (accountEmail: string, threadId: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.openEmail, accountEmail, threadId),
   dismissEmail: (emailId: string): Promise<void> =>
     ipcRenderer.invoke(IPC.dismissEmail, emailId),
   undismissEmail: (emailId: string): Promise<void> =>

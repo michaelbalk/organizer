@@ -131,32 +131,47 @@ function decodeEntities(s: string): string {
 
 /** Shape of a gaxios HTTP error (duck-typed to avoid a hard dependency). */
 interface HttpishError {
-  response?: { status?: number; data?: { error?: { message?: string } } }
+  response?: {
+    status?: number
+    data?: { error?: { message?: string; status?: string; details?: { reason?: string }[] } }
+  }
   message?: string
 }
 
 function toInboxError(accountId: string, accountEmail: string, err: unknown): InboxError {
   const e = (err ?? {}) as HttpishError
-  let message = e.message ?? String(err)
-  let needsReconnect = false
-
   const status = e.response?.status
-  const apiMsg = e.response?.data?.error?.message
-  if (apiMsg) message = apiMsg
+  const apiErr = e.response?.data?.error
+  const apiMsg = apiErr?.message
+  let message = apiMsg ?? e.message ?? String(err)
 
-  if (
-    status === 401 ||
-    status === 403 ||
-    /invalid_grant|invalid credentials|not connected|sign in again/i.test(message)
-  ) {
+  // Surface the raw Google error to the dev console for diagnosis.
+  console.error(`[inbox] fetch failed for ${accountEmail} (status ${status ?? '?'}):`, apiMsg ?? e.message)
+
+  const reasonBlob = `${apiErr?.status ?? ''} ${apiErr?.details?.map((d) => d.reason).join(' ') ?? ''} ${message}`
+  const isAuth =
+    status === 401 || /invalid_grant|invalid credentials|not connected|sign in again/i.test(message)
+  const isScope = status === 403 && /insufficient|scope|ACCESS_TOKEN_SCOPE/i.test(reasonBlob)
+  const isApiDisabled =
+    status === 403 && /SERVICE_DISABLED|has not been used in project|is disabled/i.test(reasonBlob)
+
+  let needsReconnect = false
+  if (isAuth || isScope) {
     needsReconnect = true
-    message = 'Session expired. Reconnect this account in Settings.'
+    message = 'Sign-in expired or permissions changed. Reconnect this account in Settings.'
+  } else if (isApiDisabled) {
+    message =
+      "The Gmail API isn't enabled for your Google Cloud project yet. Enable it in the Cloud Console, wait ~1 minute, then hit Refresh."
   }
 
   return { accountId, accountEmail, message, needsReconnect }
 }
 
-/** Deep link that opens a specific message in Gmail for the right account. */
-export function gmailMessageUrl(accountEmail: string, messageId: string): string {
-  return `https://mail.google.com/mail/u/${encodeURIComponent(accountEmail)}/#inbox/${messageId}`
+/**
+ * Deep link that opens a conversation in Gmail for the right account. Gmail web
+ * URLs address conversations by THREAD id under the `all` view, which resolves
+ * regardless of the message's current label (avoids the "Temporary Error 404").
+ */
+export function gmailThreadUrl(accountEmail: string, threadId: string): string {
+  return `https://mail.google.com/mail/u/${encodeURIComponent(accountEmail)}/#all/${threadId}`
 }

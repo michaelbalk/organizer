@@ -111,7 +111,7 @@ export function Inbox({
   )
 
   const open = useCallback((e: EmailItem): void => {
-    window.api.openEmail(e.accountEmail, e.id)
+    window.api.openEmail(e.accountEmail, e.threadId)
   }, [])
 
   // --- Focus triage -------------------------------------------------------
