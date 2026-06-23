@@ -18,6 +18,7 @@ export const IPC = {
   updateAccount: 'account:update',
   // Inbox
   listInbox: 'inbox:list',
+  getMessage: 'inbox:message',
   openEmail: 'inbox:open',
   dismissEmail: 'inbox:dismiss',
   undismissEmail: 'inbox:undismiss'

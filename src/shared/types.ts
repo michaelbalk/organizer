@@ -108,6 +108,33 @@ export interface InboxError {
   needsReconnect: boolean
 }
 
+/** A fully-loaded message for the in-app reader. */
+export interface EmailFull {
+  id: string
+  threadId: string
+  accountId: string
+  accountEmail: string
+  workspaceId: string
+  from: string
+  fromEmail: string
+  to: string
+  cc: string
+  subject: string
+  date: string
+  /** Body HTML, rendered inside a sandboxed iframe with a strict CSP. */
+  bodyHtml: string
+  /** True when bodyHtml was derived (and escaped) from a plain-text part. */
+  isPlainText: boolean
+  attachments: EmailAttachmentMeta[]
+  unread: boolean
+}
+
+export interface EmailAttachmentMeta {
+  filename: string
+  mimeType: string
+  sizeBytes: number
+}
+
 /** Full persisted application state. */
 export interface AppData {
   version: number

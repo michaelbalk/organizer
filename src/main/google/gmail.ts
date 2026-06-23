@@ -1,4 +1,10 @@
-import type { EmailItem, InboxError, InboxResult } from '@shared/types'
+import type {
+  EmailAttachmentMeta,
+  EmailFull,
+  EmailItem,
+  InboxError,
+  InboxResult
+} from '@shared/types'
 import { getStore } from '../store'
 import { getAuthorizedClient } from './accounts'
 
@@ -109,8 +115,120 @@ function normalize(
 }
 
 function header(m: GmailMessage, name: string): string {
+  return findHeader(m.payload?.headers, name)
+}
+
+function findHeader(headers: { name: string; value: string }[] | undefined, name: string): string {
   const lower = name.toLowerCase()
-  return m.payload?.headers?.find((h) => h.name.toLowerCase() === lower)?.value ?? ''
+  return headers?.find((h) => h.name.toLowerCase() === lower)?.value ?? ''
+}
+
+// --- Full message (in-app reader) -----------------------------------------
+
+interface GmailPart {
+  mimeType?: string
+  filename?: string
+  headers?: { name: string; value: string }[]
+  body?: { data?: string; size?: number; attachmentId?: string }
+  parts?: GmailPart[]
+}
+interface GmailFullMessage {
+  id: string
+  threadId: string
+  labelIds?: string[]
+  internalDate?: string
+  payload?: GmailPart
+}
+
+/** Fetches a single message in full and projects it for the in-app reader. */
+export async function getMessage(accountId: string, messageId: string): Promise<EmailFull> {
+  const account = getStore()
+    .getData()
+    .accounts.find((a) => a.id === accountId)
+  if (!account) throw new Error('Account not found.')
+
+  const client = getAuthorizedClient(accountId)
+  const { data: m } = await client.request<GmailFullMessage>({
+    url: `${GMAIL_BASE}/messages/${messageId}?format=full`
+  })
+
+  const headers = m.payload?.headers
+  const { name, email } = parseAddress(findHeader(headers, 'From'))
+  const body = extractBody(m.payload)
+  const ms = m.internalDate ? Number(m.internalDate) : Date.now()
+
+  return {
+    id: m.id,
+    threadId: m.threadId,
+    accountId,
+    accountEmail: account.email,
+    workspaceId: account.workspaceId,
+    from: name || email || '(unknown sender)',
+    fromEmail: email,
+    to: findHeader(headers, 'To'),
+    cc: findHeader(headers, 'Cc'),
+    subject: findHeader(headers, 'Subject') || '(no subject)',
+    date: new Date(ms).toISOString(),
+    bodyHtml: body.html,
+    isPlainText: body.isPlainText,
+    attachments: collectAttachments(m.payload),
+    unread: m.labelIds?.includes('UNREAD') ?? false
+  }
+}
+
+/** Prefers a text/html part; falls back to escaped text/plain; then to nothing. */
+function extractBody(payload?: GmailPart): { html: string; isPlainText: boolean } {
+  if (!payload) return { html: '', isPlainText: true }
+
+  const htmlPart = findPart(payload, 'text/html')
+  if (htmlPart?.body?.data) return { html: decodeB64(htmlPart.body.data), isPlainText: false }
+
+  const textPart = findPart(payload, 'text/plain')
+  if (textPart?.body?.data) return { html: textToHtml(decodeB64(textPart.body.data)), isPlainText: true }
+
+  // Single-part message: the body hangs directly off the payload.
+  if (payload.body?.data && payload.mimeType?.startsWith('text/')) {
+    const raw = decodeB64(payload.body.data)
+    const isHtml = payload.mimeType === 'text/html'
+    return { html: isHtml ? raw : textToHtml(raw), isPlainText: !isHtml }
+  }
+
+  return { html: '<p style="color:#64748b">(This message has no readable text content.)</p>', isPlainText: true }
+}
+
+function findPart(part: GmailPart, mime: string): GmailPart | null {
+  if (part.mimeType === mime && part.body?.data) return part
+  for (const child of part.parts ?? []) {
+    const found = findPart(child, mime)
+    if (found) return found
+  }
+  return null
+}
+
+function collectAttachments(part?: GmailPart, acc: EmailAttachmentMeta[] = []): EmailAttachmentMeta[] {
+  if (!part) return acc
+  if (part.filename && part.body?.attachmentId) {
+    acc.push({
+      filename: part.filename,
+      mimeType: part.mimeType ?? 'application/octet-stream',
+      sizeBytes: part.body.size ?? 0
+    })
+  }
+  for (const child of part.parts ?? []) collectAttachments(child, acc)
+  return acc
+}
+
+function decodeB64(data: string): string {
+  return Buffer.from(data, 'base64url').toString('utf-8')
+}
+
+/** Wraps plain text so it renders with preserved whitespace and is HTML-safe. */
+function textToHtml(text: string): string {
+  const escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+  return `<pre style="white-space:pre-wrap;word-wrap:break-word;font-family:inherit;margin:0">${escaped}</pre>`
 }
 
 /** Splits a "Display Name <addr@x>" header into its parts. */

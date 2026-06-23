@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Account, EmailItem, InboxResult, Task, Workspace } from '@shared/types'
+import { MessageReader } from './MessageReader'
 
 interface Props {
   accounts: Account[]
@@ -31,6 +32,9 @@ export function Inbox({
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState<string | null>(null)
   const [showHandled, setShowHandled] = useState(false)
+
+  // The email currently open in the in-app reader, if any.
+  const [reading, setReading] = useState<EmailItem | null>(null)
 
   // Focus-triage snapshot: a frozen queue we step through one item at a time.
   const [triage, setTriage] = useState<{ queue: EmailItem[]; index: number } | null>(null)
@@ -110,8 +114,9 @@ export function Inbox({
     [onChanged]
   )
 
+  // Open the message inside the app (replaces the old browser hand-off).
   const open = useCallback((e: EmailItem): void => {
-    window.api.openEmail(e.accountEmail, e.threadId)
+    setReading(e)
   }, [])
 
   // --- Focus triage -------------------------------------------------------
@@ -127,13 +132,13 @@ export function Inbox({
 
   const current = triage && triage.index < triage.queue.length ? triage.queue[triage.index] : null
 
-  const triageDoNow = useCallback(async () => {
+  // "Do it now": leave rapid triage and open the full message to act on it.
+  const triageDoNow = useCallback(() => {
     if (!current) return
-    open(current)
-    await window.api.dismissEmail(current.id)
-    await onChanged()
-    advance()
-  }, [current, open, onChanged, advance])
+    const e = current
+    setTriage(null)
+    open(e)
+  }, [current, open])
 
   const triageTask = useCallback(async () => {
     if (!current) return
@@ -294,6 +299,23 @@ export function Inbox({
           onExit={() => setTriage(null)}
         />
       )}
+
+      {reading && (
+        <MessageReader
+          email={reading}
+          color={workspaceById.get(reading.workspaceId)?.color ?? '#64748b'}
+          workspaceName={workspaceById.get(reading.workspaceId)?.name ?? ''}
+          onClose={() => setReading(null)}
+          onCapture={async () => {
+            await capture(reading)
+            setReading(null)
+          }}
+          onClear={async () => {
+            await clear(reading)
+            setReading(null)
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -329,8 +351,8 @@ function EmailRow({
         <button className="btn btn-primary btn-sm" onClick={onCapture} title="Capture as a task">
           + Task
         </button>
-        <button className="btn btn-ghost btn-sm" onClick={onOpen} title="Open in Gmail">
-          Open
+        <button className="btn btn-ghost btn-sm" onClick={onOpen} title="Read in app">
+          Read
         </button>
         <button className="btn btn-ghost btn-sm" onClick={onClear} title="Clear from inbox">
           ✓ Clear
@@ -411,7 +433,7 @@ function TriageOverlay({
               <button className="triage-choice do-now" onClick={onDoNow}>
                 <span className="tc-key">1</span>
                 <span className="tc-label">⚡ Do it now</span>
-                <span className="tc-sub">Under 2 min — opens in Gmail</span>
+                <span className="tc-sub">Open &amp; handle it here</span>
               </button>
               <button className="triage-choice make-task" onClick={onTask}>
                 <span className="tc-key">2</span>

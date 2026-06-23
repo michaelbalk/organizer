@@ -3,6 +3,7 @@ import { IPC } from '@shared/ipc'
 import type {
   Account,
   AppData,
+  EmailFull,
   InboxResult,
   NewTaskInput,
   NewWorkspaceInput,
@@ -43,6 +44,8 @@ const api = {
   // Inbox
   listInbox: (maxPerAccount?: number): Promise<InboxResult> =>
     ipcRenderer.invoke(IPC.listInbox, maxPerAccount),
+  getMessage: (accountId: string, messageId: string): Promise<EmailFull> =>
+    ipcRenderer.invoke(IPC.getMessage, accountId, messageId),
   openEmail: (accountEmail: string, threadId: string): Promise<void> =>
     ipcRenderer.invoke(IPC.openEmail, accountEmail, threadId),
   dismissEmail: (emailId: string): Promise<void> =>
