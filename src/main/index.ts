@@ -22,9 +22,10 @@ function createWindow(): void {
 
   mainWindow.on('ready-to-show', () => mainWindow.show())
 
-  // Open external links in the system browser, never in-app.
+  // Open links in the system browser, never in-app. Only hand off safe schemes
+  // (covers email-body links, which open via target="_blank" popups).
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url)
+    if (/^(https?:|mailto:)/i.test(url)) shell.openExternal(url)
     return { action: 'deny' }
   })
 

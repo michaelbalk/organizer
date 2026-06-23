@@ -314,7 +314,14 @@ export function MessageReader({
                 </button>
               </div>
             )}
-            <iframe className="reader-frame" sandbox="" srcDoc={srcDoc} title="Email body" />
+            <iframe
+              className="reader-frame"
+              // allow-popups (without allow-scripts) lets links open as new windows,
+              // which the main process routes to the system browser. Scripts stay blocked.
+              sandbox="allow-popups allow-popups-to-escape-sandbox"
+              srcDoc={srcDoc}
+              title="Email body"
+            />
           </>
         )}
       </div>
@@ -404,6 +411,7 @@ const ACTION_TOAST: Record<MailActionKind, string> = {
 function buildSrcDoc(bodyHtml: string, showImages: boolean): string {
   const media = showImages ? 'data: https: http:' : 'data:'
   return `<!doctype html><html><head><meta charset="utf-8">
+<base target="_blank">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${media}; media-src ${media}; style-src 'unsafe-inline'; font-src data:;">
 <style>
   html, body { margin: 0; }
