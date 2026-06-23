@@ -23,6 +23,11 @@ interface ComposerState {
   cc: string
   subject: string
   body: string
+  /** The quoted original, kept separate so a Claude draft can be inserted above it. */
+  quote: string
+  /** Optional instruction passed to the Claude assistant. */
+  guidance: string
+  drafting: boolean
   sending: boolean
 }
 
@@ -49,6 +54,14 @@ export function MessageReader({
   const [composer, setComposer] = useState<ComposerState | null>(null)
   const [labels, setLabels] = useState<GmailLabel[] | null>(null)
   const [fileOpen, setFileOpen] = useState(false)
+  const [aiEnabled, setAiEnabled] = useState(false)
+
+  useEffect(() => {
+    window.api
+      .isAnthropicConfigured()
+      .then(setAiEnabled)
+      .catch(() => setAiEnabled(false))
+  }, [])
 
   useEffect(() => {
     let alive = true
@@ -135,7 +148,37 @@ export function MessageReader({
         : ''
     const subject = mode === 'forward' ? fwdSubject(full.subject) : reSubject(full.subject)
     const quote = mode === 'forward' ? forwardQuote(full) : replyQuote(full)
-    setComposer({ mode, to, cc, subject, body: `\n${quote}`, sending: false })
+    setComposer({
+      mode,
+      to,
+      cc,
+      subject,
+      body: `\n${quote}`,
+      quote,
+      guidance: '',
+      drafting: false,
+      sending: false
+    })
+  }
+
+  const draftWithClaude = async (): Promise<void> => {
+    if (!composer || !full) return
+    setComposer({ ...composer, drafting: true })
+    try {
+      const draft = await window.api.draftReply({
+        accountEmail: email.accountEmail,
+        mode: composer.mode,
+        fromName: full.from,
+        subject: full.subject,
+        originalBody: full.bodyText,
+        guidance: composer.guidance
+      })
+      setComposer((c) => (c ? { ...c, body: `${draft}\n\n${c.quote}`, drafting: false } : c))
+      onToast('Draft ready ✨')
+    } catch (e) {
+      reportError(e)
+      setComposer((c) => (c ? { ...c, drafting: false } : c))
+    }
   }
 
   const send = async (): Promise<void> => {
@@ -306,6 +349,27 @@ export function MessageReader({
             value={composer.subject}
             onChange={(e) => setComposer({ ...composer, subject: e.target.value })}
           />
+          {aiEnabled && (
+            <div className="composer-ai">
+              <input
+                className="composer-input composer-ai-input"
+                placeholder="Optional: tell Claude what to say…"
+                value={composer.guidance}
+                disabled={composer.drafting}
+                onChange={(e) => setComposer({ ...composer, guidance: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') void draftWithClaude()
+                }}
+              />
+              <button
+                className="btn btn-sm composer-ai-btn"
+                onClick={draftWithClaude}
+                disabled={composer.drafting}
+              >
+                {composer.drafting ? 'Drafting…' : '✨ Draft with Claude'}
+              </button>
+            </div>
+          )}
           <textarea
             className="composer-body"
             value={composer.body}

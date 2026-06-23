@@ -37,3 +37,25 @@ export function getGoogleConfig(): GoogleConfig | null {
 export function isGoogleConfigured(): boolean {
   return getGoogleConfig() !== null
 }
+
+export interface AnthropicConfig {
+  apiKey: string
+  /** Claude model id. Defaults to Opus 4.8; override with ANTHROPIC_MODEL. */
+  model: string
+}
+
+// Opus 4.8 is the most capable default. For cheap, high-volume email drafting,
+// set ANTHROPIC_MODEL=claude-haiku-4-5 in .env (~5x cheaper, plenty for replies).
+const DEFAULT_ANTHROPIC_MODEL = 'claude-opus-4-8'
+
+/** Returns the Anthropic API config, or null if no key is set. */
+export function getAnthropicConfig(): AnthropicConfig | null {
+  const apiKey = process.env.ANTHROPIC_API_KEY?.trim()
+  if (!apiKey) return null
+  const model = process.env.ANTHROPIC_MODEL?.trim() || DEFAULT_ANTHROPIC_MODEL
+  return { apiKey, model }
+}
+
+export function isAnthropicConfigured(): boolean {
+  return getAnthropicConfig() !== null
+}

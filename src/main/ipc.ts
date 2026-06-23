@@ -1,7 +1,8 @@
 import { ipcMain, shell } from 'electron'
 import { IPC } from '@shared/ipc'
 import { getStore } from './store'
-import { isGoogleConfigured } from './config'
+import { isGoogleConfigured, isAnthropicConfigured } from './config'
+import { draftReply } from './anthropic'
 import {
   connectGoogleAccount,
   disconnectGoogleAccount,
@@ -18,6 +19,7 @@ import {
 } from './google/gmail'
 import type {
   Account,
+  DraftReplyInput,
   MailActionKind,
   NewTaskInput,
   NewWorkspaceInput,
@@ -84,4 +86,8 @@ export function registerIpc(): void {
   )
   ipcMain.handle(IPC.listLabels, (_e, accountId: string) => listLabels(accountId))
   ipcMain.handle(IPC.sendEmail, (_e, input: SendEmailInput) => sendEmail(input))
+
+  // Claude assistant
+  ipcMain.handle(IPC.anthropicConfigured, () => isAnthropicConfigured())
+  ipcMain.handle(IPC.draftReply, (_e, input: DraftReplyInput) => draftReply(input))
 }

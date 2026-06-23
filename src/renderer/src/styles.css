@@ -1183,6 +1183,29 @@ button {
   min-height: 120px;
   line-height: 1.45;
 }
+.composer-ai {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.composer-ai-input {
+  flex: 1;
+}
+.composer-ai-btn {
+  flex: none;
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  border-color: transparent;
+  color: white;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.composer-ai-btn:hover {
+  background: linear-gradient(135deg, #6d28d9, #4338ca);
+}
+.composer-ai-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 .composer-foot {
   display: flex;
   align-items: center;

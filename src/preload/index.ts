@@ -3,6 +3,7 @@ import { IPC } from '@shared/ipc'
 import type {
   Account,
   AppData,
+  DraftReplyInput,
   EmailFull,
   GmailLabel,
   InboxResult,
@@ -63,7 +64,12 @@ const api = {
     ipcRenderer.invoke(IPC.fileMessage, accountId, messageId, labelId),
   listLabels: (accountId: string): Promise<GmailLabel[]> =>
     ipcRenderer.invoke(IPC.listLabels, accountId),
-  sendEmail: (input: SendEmailInput): Promise<void> => ipcRenderer.invoke(IPC.sendEmail, input)
+  sendEmail: (input: SendEmailInput): Promise<void> => ipcRenderer.invoke(IPC.sendEmail, input),
+
+  // Claude assistant
+  isAnthropicConfigured: (): Promise<boolean> => ipcRenderer.invoke(IPC.anthropicConfigured),
+  draftReply: (input: DraftReplyInput): Promise<string> =>
+    ipcRenderer.invoke(IPC.draftReply, input)
 }
 
 export type OrganizerApi = typeof api

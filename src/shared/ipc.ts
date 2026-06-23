@@ -26,7 +26,10 @@ export const IPC = {
   mailAction: 'mail:action',
   fileMessage: 'mail:file',
   listLabels: 'mail:labels',
-  sendEmail: 'mail:send'
+  sendEmail: 'mail:send',
+  // Claude assistant
+  anthropicConfigured: 'claude:configured',
+  draftReply: 'claude:draft'
 } as const
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC]
