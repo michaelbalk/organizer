@@ -2,8 +2,11 @@ import type {
   EmailAttachmentMeta,
   EmailFull,
   EmailItem,
+  GmailLabel,
   InboxError,
-  InboxResult
+  InboxResult,
+  MailActionKind,
+  SendEmailInput
 } from '@shared/types'
 import { getStore } from '../store'
 import { getAuthorizedClient } from './accounts'
@@ -169,7 +172,9 @@ export async function getMessage(accountId: string, messageId: string): Promise<
     cc: findHeader(headers, 'Cc'),
     subject: findHeader(headers, 'Subject') || '(no subject)',
     date: new Date(ms).toISOString(),
+    messageIdHeader: findHeader(headers, 'Message-ID') || findHeader(headers, 'Message-Id'),
     bodyHtml: body.html,
+    bodyText: body.text,
     isPlainText: body.isPlainText,
     attachments: collectAttachments(m.payload),
     unread: m.labelIds?.includes('UNREAD') ?? false
@@ -177,23 +182,54 @@ export async function getMessage(accountId: string, messageId: string): Promise<
 }
 
 /** Prefers a text/html part; falls back to escaped text/plain; then to nothing. */
-function extractBody(payload?: GmailPart): { html: string; isPlainText: boolean } {
-  if (!payload) return { html: '', isPlainText: true }
-
-  const htmlPart = findPart(payload, 'text/html')
-  if (htmlPart?.body?.data) return { html: decodeB64(htmlPart.body.data), isPlainText: false }
+function extractBody(payload?: GmailPart): { html: string; text: string; isPlainText: boolean } {
+  if (!payload) return { html: '', text: '', isPlainText: true }
 
   const textPart = findPart(payload, 'text/plain')
-  if (textPart?.body?.data) return { html: textToHtml(decodeB64(textPart.body.data)), isPlainText: true }
+  const text = textPart?.body?.data ? decodeB64(textPart.body.data) : ''
+
+  const htmlPart = findPart(payload, 'text/html')
+  if (htmlPart?.body?.data) {
+    const html = decodeB64(htmlPart.body.data)
+    return { html, text: text || htmlToText(html), isPlainText: false }
+  }
+
+  if (text) return { html: textToHtml(text), text, isPlainText: true }
 
   // Single-part message: the body hangs directly off the payload.
   if (payload.body?.data && payload.mimeType?.startsWith('text/')) {
     const raw = decodeB64(payload.body.data)
     const isHtml = payload.mimeType === 'text/html'
-    return { html: isHtml ? raw : textToHtml(raw), isPlainText: !isHtml }
+    return {
+      html: isHtml ? raw : textToHtml(raw),
+      text: isHtml ? htmlToText(raw) : raw,
+      isPlainText: !isHtml
+    }
   }
 
-  return { html: '<p style="color:#64748b">(This message has no readable text content.)</p>', isPlainText: true }
+  return {
+    html: '<p style="color:#64748b">(This message has no readable text content.)</p>',
+    text: '',
+    isPlainText: true
+  }
+}
+
+/** Crude HTML→text reduction, good enough for quoting an original in a reply. */
+function htmlToText(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<\/(p|div|tr|h[1-6]|li)>/gi, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
 }
 
 function findPart(part: GmailPart, mime: string): GmailPart | null {
@@ -283,6 +319,100 @@ function toInboxError(accountId: string, accountEmail: string, err: unknown): In
   }
 
   return { accountId, accountEmail, message, needsReconnect }
+}
+
+// --- Write actions (need gmail.modify / gmail.send) -----------------------
+
+/** Applies/removes labels on a message via the modify endpoint. */
+async function modify(
+  accountId: string,
+  messageId: string,
+  body: { addLabelIds?: string[]; removeLabelIds?: string[] }
+): Promise<void> {
+  const client = getAuthorizedClient(accountId)
+  await client.request({
+    url: `${GMAIL_BASE}/messages/${messageId}/modify`,
+    method: 'POST',
+    data: body
+  })
+}
+
+/** Archive / trash / mark read / mark unread. */
+export async function applyMailAction(
+  accountId: string,
+  messageId: string,
+  action: MailActionKind
+): Promise<void> {
+  if (action === 'trash') {
+    const client = getAuthorizedClient(accountId)
+    await client.request({ url: `${GMAIL_BASE}/messages/${messageId}/trash`, method: 'POST' })
+    return
+  }
+  if (action === 'archive') return modify(accountId, messageId, { removeLabelIds: ['INBOX'] })
+  if (action === 'markRead') return modify(accountId, messageId, { removeLabelIds: ['UNREAD'] })
+  return modify(accountId, messageId, { addLabelIds: ['UNREAD'] })
+}
+
+/** "File" a message: apply a label and remove it from the inbox. */
+export async function fileMessage(
+  accountId: string,
+  messageId: string,
+  labelId: string
+): Promise<void> {
+  return modify(accountId, messageId, { addLabelIds: [labelId], removeLabelIds: ['INBOX'] })
+}
+
+/** Lists the account's user-created labels (for the "File to…" menu). */
+export async function listLabels(accountId: string): Promise<GmailLabel[]> {
+  const client = getAuthorizedClient(accountId)
+  const { data } = await client.request<{
+    labels?: { id: string; name: string; type?: string }[]
+  }>({ url: `${GMAIL_BASE}/labels` })
+  return (data.labels ?? [])
+    .filter((l) => l.type !== 'system')
+    .map((l) => ({ id: l.id, name: l.name }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+}
+
+/** Sends a reply/forward/new message via Gmail, threading replies correctly. */
+export async function sendEmail(input: SendEmailInput): Promise<void> {
+  const account = getStore()
+    .getData()
+    .accounts.find((a) => a.id === input.accountId)
+  if (!account) throw new Error('Account not found.')
+
+  const client = getAuthorizedClient(input.accountId)
+  const raw = buildRawMessage(account.email, input)
+  await client.request({
+    url: `${GMAIL_BASE}/messages/send`,
+    method: 'POST',
+    data: input.threadId ? { raw, threadId: input.threadId } : { raw }
+  })
+}
+
+/** Builds a base64url-encoded RFC822 message (UTF-8, plain text). */
+function buildRawMessage(fromEmail: string, input: SendEmailInput): string {
+  const headers: string[] = [
+    `From: ${fromEmail}`,
+    `To: ${input.to}`,
+    ...(input.cc ? [`Cc: ${input.cc}`] : []),
+    `Subject: ${encodeHeader(input.subject)}`,
+    'MIME-Version: 1.0',
+    'Content-Type: text/plain; charset="UTF-8"',
+    'Content-Transfer-Encoding: 8bit'
+  ]
+  if (input.inReplyTo) {
+    headers.push(`In-Reply-To: ${input.inReplyTo}`, `References: ${input.inReplyTo}`)
+  }
+  const message = `${headers.join('\r\n')}\r\n\r\n${input.body}`
+  return Buffer.from(message, 'utf-8').toString('base64url')
+}
+
+/** RFC2047-encodes a header value when it contains non-ASCII characters. */
+function encodeHeader(value: string): string {
+  // eslint-disable-next-line no-control-regex
+  if (/^[\x00-\x7F]*$/.test(value)) return value
+  return `=?UTF-8?B?${Buffer.from(value, 'utf-8').toString('base64')}?=`
 }
 
 /**

@@ -121,8 +121,12 @@ export interface EmailFull {
   cc: string
   subject: string
   date: string
+  /** RFC822 Message-ID header, used to thread replies (In-Reply-To/References). */
+  messageIdHeader: string
   /** Body HTML, rendered inside a sandboxed iframe with a strict CSP. */
   bodyHtml: string
+  /** Best-effort plain-text rendition of the body, for quoting in replies. */
+  bodyText: string
   /** True when bodyHtml was derived (and escaped) from a plain-text part. */
   isPlainText: boolean
   attachments: EmailAttachmentMeta[]
@@ -134,6 +138,28 @@ export interface EmailAttachmentMeta {
   mimeType: string
   sizeBytes: number
 }
+
+/** A Gmail label the user can file a message into. */
+export interface GmailLabel {
+  id: string
+  name: string
+}
+
+/** Payload for sending a reply/forward/new message from the app. */
+export interface SendEmailInput {
+  accountId: string
+  to: string
+  cc?: string
+  subject: string
+  /** Plain-text body. */
+  body: string
+  /** Set for replies/forwards so Gmail threads the message correctly. */
+  threadId?: string
+  /** Original Message-ID header, for In-Reply-To/References on replies. */
+  inReplyTo?: string
+}
+
+export type MailActionKind = 'archive' | 'trash' | 'markRead' | 'markUnread'
 
 /** Full persisted application state. */
 export interface AppData {

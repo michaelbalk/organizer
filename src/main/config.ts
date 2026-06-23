@@ -14,7 +14,9 @@ export interface GoogleConfig {
 const DEFAULT_SCOPES = [
   'openid',
   'email',
-  'https://www.googleapis.com/auth/gmail.readonly',
+  // gmail.modify includes read access plus label/archive/trash/mark-read.
+  'https://www.googleapis.com/auth/gmail.modify',
+  'https://www.googleapis.com/auth/gmail.send',
   'https://www.googleapis.com/auth/calendar.readonly'
 ]
 

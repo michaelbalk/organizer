@@ -21,7 +21,12 @@ export const IPC = {
   getMessage: 'inbox:message',
   openEmail: 'inbox:open',
   dismissEmail: 'inbox:dismiss',
-  undismissEmail: 'inbox:undismiss'
+  undismissEmail: 'inbox:undismiss',
+  // Mail write actions (gmail.modify / gmail.send)
+  mailAction: 'mail:action',
+  fileMessage: 'mail:file',
+  listLabels: 'mail:labels',
+  sendEmail: 'mail:send'
 } as const
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC]

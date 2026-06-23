@@ -949,18 +949,78 @@ button {
   }
 }
 
-/* ---------- Message reader ---------- */
-.reader {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  width: 760px;
-  max-width: calc(100vw - 40px);
-  height: calc(100vh - 80px);
-  max-height: 880px;
-  box-shadow: var(--shadow);
+/* ---------- Inbox split layout ---------- */
+.inbox-split {
+  display: grid;
+  grid-template-columns: minmax(320px, 380px) 1fr;
+  gap: 16px;
+  height: 100%;
+  min-height: 0;
+}
+.inbox-list-col {
   display: flex;
   flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.inbox-reader-col {
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.reader-empty {
+  margin: auto;
+  text-align: center;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px;
+}
+.reader-empty p {
+  max-width: 280px;
+  line-height: 1.5;
+}
+
+.email-row.compact {
+  cursor: pointer;
+}
+.email-row.compact .email-snippet {
+  white-space: nowrap;
+}
+.email-row.selected {
+  border-color: var(--accent);
+  background: var(--panel-2);
+}
+.icon-btn-sm {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1;
+}
+.icon-btn-sm:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+/* ---------- Message reader pane ---------- */
+.reader-pane {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
 }
 .reader-head {
   display: flex;
@@ -980,14 +1040,13 @@ button {
   text-overflow: ellipsis;
 }
 .reader-subject {
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 700;
   line-height: 1.3;
   padding: 10px 18px 8px;
 }
 .reader-meta {
   padding: 0 18px 12px;
-  border-bottom: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -999,6 +1058,53 @@ button {
 .reader-date {
   font-size: 12px;
   margin-top: 2px;
+}
+.reader-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 18px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.reader-actions-gap {
+  flex: 1;
+}
+.file-wrap {
+  position: relative;
+}
+.file-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 20;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  min-width: 180px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 4px;
+}
+.file-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+.file-menu-item:hover {
+  background: var(--panel-2);
+}
+.file-menu-empty {
+  padding: 8px 10px;
+  font-size: 12px;
 }
 .reader-attachments {
   display: flex;
@@ -1020,7 +1126,7 @@ button {
   gap: 8px;
   font-size: 12px;
   color: var(--text-dim);
-  background: var(--bg-2);
+  background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 8px 10px;
@@ -1033,21 +1139,55 @@ button {
   border-radius: 8px;
   background: #fff;
 }
-.reader-foot {
+
+/* ---------- Composer ---------- */
+.composer {
+  border-top: 1px solid var(--border);
+  background: var(--bg-2);
+  padding: 12px 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 52%;
+}
+.composer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+}
+.composer-input,
+.composer-body {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 10px;
+  border-radius: 7px;
+  font-size: 13px;
+  outline: none;
+  font-family: inherit;
+}
+.composer-input:focus,
+.composer-body:focus {
+  border-color: var(--accent);
+}
+.composer-body {
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.45;
+}
+.composer-foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 18px;
-  border-top: 1px solid var(--border);
 }
-.reader-foot-note {
+.composer-hint {
   font-size: 11.5px;
 }
-.reader-foot-right {
+.composer-foot-right {
   display: flex;
-  gap: 10px;
-  flex: none;
+  gap: 8px;
 }
 
 /* ---------- Focus triage ---------- */

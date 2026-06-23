@@ -1,38 +1,58 @@
-import { useEffect, useState } from 'react'
-import type { EmailFull, EmailItem } from '@shared/types'
+import { useEffect, useMemo, useState } from 'react'
+import type { EmailFull, EmailItem, GmailLabel, MailActionKind } from '@shared/types'
 
 interface Props {
   email: EmailItem
   color: string
   workspaceName: string
-  onClose: () => void
-  onCapture: () => void
-  onClear: () => void
+  onToast: (msg: string) => void
+  /** Capture the email as a task (owned by the inbox). */
+  onCapture: (e: EmailItem) => Promise<void>
+  /** Reload the inbox after a server-side mutation (archive/trash/file/send). */
+  onServerChanged: () => Promise<void>
+  /** Close the reading pane (e.g. after the message leaves the inbox). */
+  onDeselect: () => void
+}
+
+type ComposerMode = 'reply' | 'replyAll' | 'forward'
+interface ComposerState {
+  mode: ComposerMode
+  to: string
+  cc: string
+  subject: string
+  body: string
+  sending: boolean
 }
 
 /**
- * In-app message reader. The email body is rendered inside a sandboxed iframe
- * with a strict Content-Security-Policy so hostile markup can't run scripts,
- * navigate the app, or leak data. Remote images are blocked by default (they're
- * the usual tracking-pixel vector) and loadable on demand.
+ * Embedded reading pane. The message body renders inside a sandboxed iframe with
+ * a strict CSP (no scripts/forms/navigation; remote images blocked by default).
+ * The action bar and composer drive Gmail directly via gmail.modify / gmail.send.
  */
 export function MessageReader({
   email,
   color,
   workspaceName,
-  onClose,
+  onToast,
   onCapture,
-  onClear
+  onServerChanged,
+  onDeselect
 }: Props): JSX.Element {
   const [full, setFull] = useState<EmailFull | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [showImages, setShowImages] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [composer, setComposer] = useState<ComposerState | null>(null)
+  const [labels, setLabels] = useState<GmailLabel[] | null>(null)
+  const [fileOpen, setFileOpen] = useState(false)
 
   useEffect(() => {
     let alive = true
     setFull(null)
     setError(null)
     setShowImages(false)
+    setComposer(null)
+    setFileOpen(false)
     window.api
       .getMessage(email.accountId, email.id)
       .then((m) => alive && setFull(m))
@@ -42,98 +62,257 @@ export function MessageReader({
     }
   }, [email.accountId, email.id])
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') onClose()
+  const srcDoc = useMemo(
+    () => (full ? buildSrcDoc(full.bodyHtml, showImages) : ''),
+    [full, showImages]
+  )
+
+  // --- Server actions -----------------------------------------------------
+
+  const runAction = async (action: MailActionKind): Promise<void> => {
+    setBusy(true)
+    try {
+      await window.api.mailAction(email.accountId, email.id, action)
+      onToast(ACTION_TOAST[action])
+      await onServerChanged()
+      if (action === 'archive' || action === 'trash') onDeselect()
+      else setFull((f) => (f ? { ...f, unread: action === 'markUnread' } : f))
+    } catch (e) {
+      onToast(errMessage(e))
+    } finally {
+      setBusy(false)
     }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }
+
+  const openFileMenu = async (): Promise<void> => {
+    setFileOpen((v) => !v)
+    if (labels === null) {
+      try {
+        setLabels(await window.api.listLabels(email.accountId))
+      } catch (e) {
+        onToast(errMessage(e))
+        setLabels([])
+      }
+    }
+  }
+
+  const fileTo = async (label: GmailLabel): Promise<void> => {
+    setBusy(true)
+    setFileOpen(false)
+    try {
+      await window.api.fileMessage(email.accountId, email.id, label.id)
+      onToast(`Filed to ${label.name}`)
+      await onServerChanged()
+      onDeselect()
+    } catch (e) {
+      onToast(errMessage(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // --- Composer -----------------------------------------------------------
+
+  const startCompose = (mode: ComposerMode): void => {
+    if (!full) return
+    const to = mode === 'forward' ? '' : full.fromEmail
+    const cc =
+      mode === 'replyAll'
+        ? dedupeAddresses([full.to, full.cc], [email.accountEmail, full.fromEmail])
+        : ''
+    const subject = mode === 'forward' ? fwdSubject(full.subject) : reSubject(full.subject)
+    const quote = mode === 'forward' ? forwardQuote(full) : replyQuote(full)
+    setComposer({ mode, to, cc, subject, body: `\n${quote}`, sending: false })
+  }
+
+  const send = async (): Promise<void> => {
+    if (!composer || !full) return
+    if (!composer.to.trim()) {
+      onToast('Add at least one recipient.')
+      return
+    }
+    setComposer({ ...composer, sending: true })
+    try {
+      await window.api.sendEmail({
+        accountId: email.accountId,
+        to: composer.to,
+        cc: composer.cc.trim() || undefined,
+        subject: composer.subject,
+        body: composer.body,
+        threadId: email.threadId,
+        inReplyTo: composer.mode === 'forward' ? undefined : full.messageIdHeader || undefined
+      })
+      onToast('Sent ✓')
+      setComposer(null)
+      await onServerChanged()
+    } catch (e) {
+      onToast(errMessage(e))
+      setComposer((c) => (c ? { ...c, sending: false } : c))
+    }
+  }
+
+  // --- Render -------------------------------------------------------------
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="reader" onClick={(e) => e.stopPropagation()}>
-        <div className="reader-head">
-          <div className="reader-head-main">
-            <span className="ws-chip" style={{ background: color }}>
-              {workspaceName}
-            </span>
-            <span className="muted">{email.accountEmail}</span>
-          </div>
-          <button className="icon-btn" onClick={onClose} title="Close (Esc)">
-            ✕
+    <div className="reader-pane">
+      <div className="reader-head">
+        <div className="reader-head-main">
+          <span className="ws-chip" style={{ background: color }}>
+            {workspaceName}
+          </span>
+          <span className="muted">{email.accountEmail}</span>
+          {full?.unread === false && <span className="pill pill-off">Read</span>}
+        </div>
+        <button className="icon-btn" onClick={onDeselect} title="Close">
+          ✕
+        </button>
+      </div>
+
+      <div className="reader-subject">{email.subject}</div>
+      <div className="reader-meta">
+        <div>
+          <strong>{full?.from ?? email.from}</strong>{' '}
+          {full?.fromEmail && <span className="muted">&lt;{full.fromEmail}&gt;</span>}
+        </div>
+        {full?.to && <div className="muted">to {full.to}</div>}
+        <div className="muted reader-date">{formatFull(full?.date ?? email.date)}</div>
+      </div>
+
+      {/* Action bar */}
+      <div className="reader-actions">
+        <button className="btn btn-sm btn-primary" disabled={!full || busy} onClick={() => startCompose('reply')}>
+          ↩ Reply
+        </button>
+        <button className="btn btn-sm btn-ghost" disabled={!full || busy} onClick={() => startCompose('replyAll')}>
+          ↩ All
+        </button>
+        <button className="btn btn-sm btn-ghost" disabled={!full || busy} onClick={() => startCompose('forward')}>
+          ↪ Forward
+        </button>
+        <span className="reader-actions-gap" />
+        <button className="btn btn-sm btn-ghost" disabled={busy} onClick={() => runAction('archive')} title="Archive">
+          🗄 Archive
+        </button>
+        <div className="file-wrap">
+          <button className="btn btn-sm btn-ghost" disabled={busy} onClick={openFileMenu} title="File to a label">
+            🏷 File
           </button>
-        </div>
-
-        <div className="reader-subject">{email.subject}</div>
-        <div className="reader-meta">
-          <div>
-            <strong>{full?.from ?? email.from}</strong>{' '}
-            {full?.fromEmail && <span className="muted">&lt;{full.fromEmail}&gt;</span>}
-          </div>
-          {full?.to && <div className="muted">to {full.to}</div>}
-          <div className="muted reader-date">{formatFull(full?.date ?? email.date)}</div>
-        </div>
-
-        {full && full.attachments.length > 0 && (
-          <div className="reader-attachments">
-            {full.attachments.map((a, i) => (
-              <span key={i} className="chip" title={`${a.mimeType} · ${formatSize(a.sizeBytes)}`}>
-                📎 {a.filename}
-              </span>
-            ))}
-          </div>
-        )}
-
-        <div className="reader-body">
-          {error ? (
-            <div className="banner banner-error">{error}</div>
-          ) : !full ? (
-            <div className="app-loading" style={{ height: 'auto', paddingTop: 30 }}>
-              <div className="spinner" />
-              <span>Loading message…</span>
-            </div>
-          ) : (
-            <>
-              {!showImages && !full.isPlainText && (
-                <div className="reader-images-bar">
-                  <span>External images are blocked for your privacy.</span>
-                  <button className="link-btn" onClick={() => setShowImages(true)}>
-                    Load images
+          {fileOpen && (
+            <div className="file-menu">
+              {labels === null ? (
+                <div className="file-menu-empty muted">Loading…</div>
+              ) : labels.length === 0 ? (
+                <div className="file-menu-empty muted">No custom labels</div>
+              ) : (
+                labels.map((l) => (
+                  <button key={l.id} className="file-menu-item" onClick={() => fileTo(l)}>
+                    {l.name}
                   </button>
-                </div>
+                ))
               )}
-              <iframe
-                className="reader-frame"
-                sandbox=""
-                srcDoc={buildSrcDoc(full.bodyHtml, showImages)}
-                title="Email body"
-              />
-            </>
+            </div>
           )}
         </div>
+        <button className="btn btn-sm btn-ghost" disabled={busy} onClick={() => runAction('trash')} title="Move to Trash">
+          🗑 Trash
+        </button>
+        <button
+          className="btn btn-sm btn-ghost"
+          disabled={!full || busy}
+          onClick={() => runAction(full?.unread ? 'markRead' : 'markUnread')}
+        >
+          {full?.unread ? '✓ Mark read' : '• Mark unread'}
+        </button>
+        <span className="reader-actions-gap" />
+        <button className="btn btn-sm btn-ghost" disabled={busy} onClick={() => onCapture(email)} title="Capture as a task">
+          + Task
+        </button>
+      </div>
 
-        <div className="reader-foot">
-          <span className="reader-foot-note muted">Reply &amp; archive arrive in the next update.</span>
-          <div className="reader-foot-right">
-            <button className="btn btn-ghost" onClick={onClear} title="Clear from inbox">
-              ✓ Clear
-            </button>
-            <button className="btn btn-primary" onClick={onCapture} title="Capture as a task">
-              + Task
+      <div className="reader-body">
+        {error ? (
+          <div className="banner banner-error">{error}</div>
+        ) : !full ? (
+          <div className="app-loading" style={{ height: 'auto', paddingTop: 30 }}>
+            <div className="spinner" />
+            <span>Loading message…</span>
+          </div>
+        ) : (
+          <>
+            {!showImages && !full.isPlainText && (
+              <div className="reader-images-bar">
+                <span>External images are blocked for your privacy.</span>
+                <button className="link-btn" onClick={() => setShowImages(true)}>
+                  Load images
+                </button>
+              </div>
+            )}
+            <iframe className="reader-frame" sandbox="" srcDoc={srcDoc} title="Email body" />
+          </>
+        )}
+      </div>
+
+      {composer && (
+        <div className="composer">
+          <div className="composer-head">
+            <strong>
+              {composer.mode === 'forward' ? 'Forward' : composer.mode === 'replyAll' ? 'Reply all' : 'Reply'}
+            </strong>
+            <button className="icon-btn" onClick={() => setComposer(null)} title="Discard">
+              ✕
             </button>
           </div>
+          <input
+            className="composer-input"
+            placeholder="To"
+            value={composer.to}
+            onChange={(e) => setComposer({ ...composer, to: e.target.value })}
+          />
+          {(composer.cc || composer.mode === 'replyAll') && (
+            <input
+              className="composer-input"
+              placeholder="Cc"
+              value={composer.cc}
+              onChange={(e) => setComposer({ ...composer, cc: e.target.value })}
+            />
+          )}
+          <input
+            className="composer-input"
+            placeholder="Subject"
+            value={composer.subject}
+            onChange={(e) => setComposer({ ...composer, subject: e.target.value })}
+          />
+          <textarea
+            className="composer-body"
+            value={composer.body}
+            onChange={(e) => setComposer({ ...composer, body: e.target.value })}
+          />
+          <div className="composer-foot">
+            <span className="muted composer-hint">Sends from {email.accountEmail}</span>
+            <div className="composer-foot-right">
+              <button className="btn btn-ghost" onClick={() => setComposer(null)} disabled={composer.sending}>
+                Discard
+              </button>
+              <button className="btn btn-primary" onClick={send} disabled={composer.sending}>
+                {composer.sending ? 'Sending…' : 'Send'}
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
 
-/**
- * Wraps the email body in a minimal HTML document with a strict CSP. With the
- * iframe's empty `sandbox`, scripts/forms/navigation are already disabled; the
- * CSP additionally gates image/media loading to neutralize tracking pixels.
- */
+// --- Helpers --------------------------------------------------------------
+
+const ACTION_TOAST: Record<MailActionKind, string> = {
+  archive: 'Archived ✓',
+  trash: 'Moved to Trash ✓',
+  markRead: 'Marked read',
+  markUnread: 'Marked unread'
+}
+
 function buildSrcDoc(bodyHtml: string, showImages: boolean): string {
   const media = showImages ? 'data: https: http:' : 'data:'
   return `<!doctype html><html><head><meta charset="utf-8">
@@ -148,6 +327,50 @@ function buildSrcDoc(bodyHtml: string, showImages: boolean): string {
 </style></head><body>${bodyHtml}</body></html>`
 }
 
+function reSubject(subject: string): string {
+  return /^re:/i.test(subject.trim()) ? subject : `Re: ${subject}`
+}
+function fwdSubject(subject: string): string {
+  return /^fwd:/i.test(subject.trim()) ? subject : `Fwd: ${subject}`
+}
+
+function replyQuote(full: EmailFull): string {
+  const quoted = full.bodyText
+    .split('\n')
+    .map((l) => `> ${l}`)
+    .join('\n')
+  return `On ${formatFull(full.date)}, ${full.from} wrote:\n${quoted}\n`
+}
+
+function forwardQuote(full: EmailFull): string {
+  return (
+    `---------- Forwarded message ----------\n` +
+    `From: ${full.from} <${full.fromEmail}>\n` +
+    `Date: ${formatFull(full.date)}\n` +
+    `Subject: ${full.subject}\n` +
+    `To: ${full.to}\n\n` +
+    `${full.bodyText}\n`
+  )
+}
+
+/** Splits comma-separated address headers, drops excluded emails, dedupes. */
+function dedupeAddresses(sources: string[], exclude: string[]): string {
+  const skip = new Set(exclude.map((e) => e.toLowerCase()).filter(Boolean))
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const src of sources) {
+    for (const part of src.split(',')) {
+      const addr = part.trim()
+      if (!addr) continue
+      const email = (addr.match(/<([^>]+)>/)?.[1] ?? addr).toLowerCase()
+      if (skip.has(email) || seen.has(email)) continue
+      seen.add(email)
+      out.push(addr)
+    }
+  }
+  return out.join(', ')
+}
+
 function formatFull(iso: string): string {
   return new Date(iso).toLocaleString([], {
     weekday: 'short',
@@ -158,16 +381,9 @@ function formatFull(iso: string): string {
   })
 }
 
-function formatSize(bytes: number): string {
-  if (!bytes) return ''
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
 function errMessage(e: unknown): string {
   const m = e instanceof Error ? e.message : String(e)
-  return /scope|insufficient|invalid_grant|not connected/i.test(m)
-    ? 'Could not load this message — the account may need to be reconnected in Settings.'
-    : `Could not load this message. ${m}`
+  return /scope|insufficient|invalid_grant|not connected|PERMISSION_DENIED/i.test(m)
+    ? 'That action needs reconnecting this account in Settings (to grant send/modify permission).'
+    : m
 }

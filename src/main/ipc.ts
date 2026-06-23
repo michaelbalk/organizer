@@ -7,8 +7,24 @@ import {
   disconnectGoogleAccount,
   removeGoogleAccount
 } from './google/accounts'
-import { listInbox, getMessage, gmailThreadUrl } from './google/gmail'
-import type { Account, NewTaskInput, NewWorkspaceInput, TaskPatch, Workspace } from '@shared/types'
+import {
+  listInbox,
+  getMessage,
+  gmailThreadUrl,
+  applyMailAction,
+  fileMessage,
+  listLabels,
+  sendEmail
+} from './google/gmail'
+import type {
+  Account,
+  MailActionKind,
+  NewTaskInput,
+  NewWorkspaceInput,
+  SendEmailInput,
+  TaskPatch,
+  Workspace
+} from '@shared/types'
 
 /** Register all IPC handlers. Called once after the app is ready. */
 export function registerIpc(): void {
@@ -58,4 +74,14 @@ export function registerIpc(): void {
   )
   ipcMain.handle(IPC.dismissEmail, (_e, emailId: string) => store.dismissEmail(emailId))
   ipcMain.handle(IPC.undismissEmail, (_e, emailId: string) => store.undismissEmail(emailId))
+
+  // Mail write actions
+  ipcMain.handle(IPC.mailAction, (_e, accountId: string, messageId: string, action: MailActionKind) =>
+    applyMailAction(accountId, messageId, action)
+  )
+  ipcMain.handle(IPC.fileMessage, (_e, accountId: string, messageId: string, labelId: string) =>
+    fileMessage(accountId, messageId, labelId)
+  )
+  ipcMain.handle(IPC.listLabels, (_e, accountId: string) => listLabels(accountId))
+  ipcMain.handle(IPC.sendEmail, (_e, input: SendEmailInput) => sendEmail(input))
 }

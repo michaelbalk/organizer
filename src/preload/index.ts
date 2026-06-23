@@ -4,9 +4,12 @@ import type {
   Account,
   AppData,
   EmailFull,
+  GmailLabel,
   InboxResult,
+  MailActionKind,
   NewTaskInput,
   NewWorkspaceInput,
+  SendEmailInput,
   Task,
   TaskPatch,
   TaskStatus,
@@ -51,7 +54,16 @@ const api = {
   dismissEmail: (emailId: string): Promise<void> =>
     ipcRenderer.invoke(IPC.dismissEmail, emailId),
   undismissEmail: (emailId: string): Promise<void> =>
-    ipcRenderer.invoke(IPC.undismissEmail, emailId)
+    ipcRenderer.invoke(IPC.undismissEmail, emailId),
+
+  // Mail write actions (gmail.modify / gmail.send)
+  mailAction: (accountId: string, messageId: string, action: MailActionKind): Promise<void> =>
+    ipcRenderer.invoke(IPC.mailAction, accountId, messageId, action),
+  fileMessage: (accountId: string, messageId: string, labelId: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.fileMessage, accountId, messageId, labelId),
+  listLabels: (accountId: string): Promise<GmailLabel[]> =>
+    ipcRenderer.invoke(IPC.listLabels, accountId),
+  sendEmail: (input: SendEmailInput): Promise<void> => ipcRenderer.invoke(IPC.sendEmail, input)
 }
 
 export type OrganizerApi = typeof api

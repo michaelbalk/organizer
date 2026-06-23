@@ -195,93 +195,116 @@ export function Inbox({
   }
 
   return (
-    <div className="inbox">
-      {result?.errors.map((err) => (
-        <div key={err.accountId} className="banner banner-warn">
-          <strong>{err.accountEmail}:</strong> {err.message}
-          {err.needsReconnect && (
-            <button className="link-btn" onClick={onGoToSettings}>
-              Reconnect
-            </button>
-          )}
-        </div>
-      ))}
+    <div className="inbox-split">
+      <div className="inbox-list-col">
+        {result?.errors.map((err) => (
+          <div key={err.accountId} className="banner banner-warn">
+            <strong>{err.accountEmail}:</strong> {err.message}
+            {err.needsReconnect && (
+              <button className="link-btn" onClick={onGoToSettings}>
+                Reconnect
+              </button>
+            )}
+          </div>
+        ))}
 
-      <div className="inbox-head">
-        <div>
-          <div className="inbox-count">
-            {pile.length === 0 ? 'All clear' : `${pile.length} to triage`}
+        <div className="inbox-head">
+          <div>
+            <div className="inbox-count">
+              {pile.length === 0 ? 'All clear' : `${pile.length} to triage`}
+            </div>
+            <div className="muted inbox-sub">
+              {handledCount > 0 && `${handledCount} handled · `}
+              across {connected.length} account{connected.length === 1 ? '' : 's'}
+            </div>
           </div>
-          <div className="muted inbox-sub">
-            {handledCount > 0 && `${handledCount} handled · `}
-            across {connected.length} account{connected.length === 1 ? '' : 's'}
+          <div className="inbox-actions">
+            <button className="btn btn-ghost btn-sm" onClick={load} disabled={loading}>
+              {loading ? '…' : '↻'}
+            </button>
+            <button className="btn btn-primary btn-sm" onClick={startTriage} disabled={pile.length === 0}>
+              ⚡ Triage
+            </button>
           </div>
         </div>
-        <div className="inbox-actions">
-          <button className="btn btn-ghost" onClick={load} disabled={loading}>
-            {loading ? 'Refreshing…' : '↻ Refresh'}
-          </button>
-          <button className="btn btn-primary" onClick={startTriage} disabled={pile.length === 0}>
-            ⚡ Focus triage
-          </button>
-        </div>
+
+        {pile.length === 0 ? (
+          <div className="celebrate">
+            <div className="celebrate-emoji">🎉</div>
+            <h3>Inbox triaged</h3>
+            <p>Nothing left to process.</p>
+          </div>
+        ) : (
+          <ul className="email-list">
+            {pile.map((e) => (
+              <EmailRow
+                key={e.id}
+                email={e}
+                selected={reading?.id === e.id}
+                color={workspaceById.get(e.workspaceId)?.color ?? '#64748b'}
+                workspaceName={workspaceById.get(e.workspaceId)?.name ?? ''}
+                onOpen={() => open(e)}
+                onCapture={() => capture(e)}
+                onClear={() => clear(e)}
+              />
+            ))}
+          </ul>
+        )}
+
+        {handledCount > 0 && (
+          <div className="handled-section">
+            <button className="link-btn" onClick={() => setShowHandled((v) => !v)}>
+              {showHandled ? 'Hide' : 'Show'} {handledCount} handled
+            </button>
+            {showHandled && (
+              <ul className="email-list handled">
+                {emails
+                  .filter((e) => isHandled(e))
+                  .map((e) => (
+                    <li key={e.id} className="email-row handled-row">
+                      <span
+                        className="ws-stripe"
+                        style={{ background: workspaceById.get(e.workspaceId)?.color ?? '#64748b' }}
+                      />
+                      <div className="email-main">
+                        <div className="email-subject">{e.subject}</div>
+                        <div className="email-from muted">{e.from}</div>
+                      </div>
+                      <span className="pill pill-off">
+                        {taskedEmailIds.has(e.id) ? 'Task created' : 'Cleared'}
+                      </span>
+                      {dismissedSet.has(e.id) && !taskedEmailIds.has(e.id) && (
+                        <button className="link-btn" onClick={() => restore(e)}>
+                          Undo
+                        </button>
+                      )}
+                    </li>
+                  ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
 
-      {pile.length === 0 ? (
-        <div className="celebrate">
-          <div className="celebrate-emoji">🎉</div>
-          <h3>Inbox triaged</h3>
-          <p>Nothing left to process. Captured items are waiting on your task board.</p>
-        </div>
-      ) : (
-        <ul className="email-list">
-          {pile.map((e) => (
-            <EmailRow
-              key={e.id}
-              email={e}
-              color={workspaceById.get(e.workspaceId)?.color ?? '#64748b'}
-              workspaceName={workspaceById.get(e.workspaceId)?.name ?? ''}
-              onOpen={() => open(e)}
-              onCapture={() => capture(e)}
-              onClear={() => clear(e)}
-            />
-          ))}
-        </ul>
-      )}
-
-      {handledCount > 0 && (
-        <div className="handled-section">
-          <button className="link-btn" onClick={() => setShowHandled((v) => !v)}>
-            {showHandled ? 'Hide' : 'Show'} {handledCount} handled
-          </button>
-          {showHandled && (
-            <ul className="email-list handled">
-              {emails
-                .filter((e) => isHandled(e))
-                .map((e) => (
-                  <li key={e.id} className="email-row handled-row">
-                    <span
-                      className="ws-stripe"
-                      style={{ background: workspaceById.get(e.workspaceId)?.color ?? '#64748b' }}
-                    />
-                    <div className="email-main">
-                      <div className="email-subject">{e.subject}</div>
-                      <div className="email-from muted">{e.from}</div>
-                    </div>
-                    <span className="pill pill-off">
-                      {taskedEmailIds.has(e.id) ? 'Task created' : 'Cleared'}
-                    </span>
-                    {dismissedSet.has(e.id) && !taskedEmailIds.has(e.id) && (
-                      <button className="link-btn" onClick={() => restore(e)}>
-                        Undo
-                      </button>
-                    )}
-                  </li>
-                ))}
-            </ul>
-          )}
-        </div>
-      )}
+      <div className="inbox-reader-col">
+        {reading ? (
+          <MessageReader
+            key={reading.id}
+            email={reading}
+            color={workspaceById.get(reading.workspaceId)?.color ?? '#64748b'}
+            workspaceName={workspaceById.get(reading.workspaceId)?.name ?? ''}
+            onToast={setToast}
+            onCapture={capture}
+            onServerChanged={load}
+            onDeselect={() => setReading(null)}
+          />
+        ) : (
+          <div className="reader-empty">
+            <div className="placeholder-icon">📬</div>
+            <p>Select an email to read, reply, and organize — all in here.</p>
+          </div>
+        )}
+      </div>
 
       {toast && <div className="toast">{toast}</div>}
 
@@ -299,29 +322,13 @@ export function Inbox({
           onExit={() => setTriage(null)}
         />
       )}
-
-      {reading && (
-        <MessageReader
-          email={reading}
-          color={workspaceById.get(reading.workspaceId)?.color ?? '#64748b'}
-          workspaceName={workspaceById.get(reading.workspaceId)?.name ?? ''}
-          onClose={() => setReading(null)}
-          onCapture={async () => {
-            await capture(reading)
-            setReading(null)
-          }}
-          onClear={async () => {
-            await clear(reading)
-            setReading(null)
-          }}
-        />
-      )}
     </div>
   )
 }
 
 function EmailRow({
   email,
+  selected,
   color,
   workspaceName,
   onOpen,
@@ -329,6 +336,7 @@ function EmailRow({
   onClear
 }: {
   email: EmailItem
+  selected: boolean
   color: string
   workspaceName: string
   onOpen: () => void
@@ -336,9 +344,12 @@ function EmailRow({
   onClear: () => void
 }): JSX.Element {
   return (
-    <li className={`email-row ${email.unread ? 'unread' : ''}`}>
+    <li
+      className={`email-row compact ${email.unread ? 'unread' : ''} ${selected ? 'selected' : ''}`}
+      onClick={onOpen}
+    >
       <span className="ws-stripe" style={{ background: color }} title={workspaceName} />
-      <div className="email-main" onClick={onOpen}>
+      <div className="email-main">
         <div className="email-line">
           {email.unread && <span className="unread-dot" />}
           <span className="email-from">{email.from}</span>
@@ -347,15 +358,12 @@ function EmailRow({
         <div className="email-subject">{email.subject}</div>
         <div className="email-snippet muted">{email.snippet}</div>
       </div>
-      <div className="email-row-actions">
-        <button className="btn btn-primary btn-sm" onClick={onCapture} title="Capture as a task">
-          + Task
+      <div className="email-row-actions" onClick={(ev) => ev.stopPropagation()}>
+        <button className="icon-btn-sm" onClick={onCapture} title="Capture as a task">
+          ＋
         </button>
-        <button className="btn btn-ghost btn-sm" onClick={onOpen} title="Read in app">
-          Read
-        </button>
-        <button className="btn btn-ghost btn-sm" onClick={onClear} title="Clear from inbox">
-          ✓ Clear
+        <button className="icon-btn-sm" onClick={onClear} title="Clear from inbox">
+          ✓
         </button>
       </div>
     </li>
