@@ -32,6 +32,9 @@ export function TaskModal({
   const [status, setStatus] = useState<TaskStatus>(task?.status ?? 'todo')
   const [priority, setPriority] = useState<TaskPriority>(task?.priority ?? 'medium')
   const [dueDate, setDueDate] = useState(task?.dueDate ?? '')
+  const [dueTime, setDueTime] = useState(task?.dueTime ?? '')
+  const [estimate, setEstimate] = useState(minutesToText(task?.estimateMinutes ?? null))
+  const [actual, setActual] = useState(minutesToText(task?.actualMinutes ?? null))
   const [tagsText, setTagsText] = useState((task?.tags ?? []).join(', '))
   const [saving, setSaving] = useState(false)
 
@@ -49,6 +52,10 @@ export function TaskModal({
       status,
       priority,
       dueDate: dueDate || null,
+      // A time without a date is meaningless — drop it.
+      dueTime: dueDate ? dueTime || null : null,
+      estimateMinutes: textToMinutes(estimate),
+      actualMinutes: textToMinutes(actual),
       tags
     }
     if (editing && task) {
@@ -145,6 +152,39 @@ export function TaskModal({
             </label>
           </div>
 
+          <div className="field-row">
+            <label className="field">
+              <span>Due time</span>
+              <input
+                type="time"
+                value={dueTime}
+                disabled={!dueDate}
+                title={dueDate ? '' : 'Set a due date first'}
+                onChange={(e) => setDueTime(e.target.value)}
+              />
+            </label>
+            <label className="field">
+              <span>Expected duration</span>
+              <input
+                value={estimate}
+                placeholder="30m, 1h 30m…"
+                onChange={(e) => setEstimate(e.target.value)}
+              />
+            </label>
+          </div>
+
+          <div className="field-row">
+            <label className="field">
+              <span>Actual duration</span>
+              <input
+                value={actual}
+                placeholder="logged after the fact"
+                onChange={(e) => setActual(e.target.value)}
+              />
+            </label>
+            <span />
+          </div>
+
           <label className="field">
             <span>Tags (comma-separated)</span>
             <input
@@ -175,4 +215,34 @@ export function TaskModal({
       </div>
     </div>
   )
+}
+
+/** Parses "30", "30m", "1h", "1h 30m", "1.5h" into minutes (or null). */
+function textToMinutes(s: string): number | null {
+  const str = s.trim().toLowerCase()
+  if (!str) return null
+  if (/^\d+$/.test(str)) return parseInt(str, 10)
+  let total = 0
+  let matched = false
+  const h = str.match(/(\d+(?:\.\d+)?)\s*h/)
+  if (h) {
+    total += Math.round(parseFloat(h[1]) * 60)
+    matched = true
+  }
+  const m = str.match(/(\d+)\s*m/)
+  if (m) {
+    total += parseInt(m[1], 10)
+    matched = true
+  }
+  return matched ? total : null
+}
+
+/** Formats minutes back into "1h 30m" / "2h" / "45m". */
+function minutesToText(min: number | null): string {
+  if (min == null) return ''
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  if (h && m) return `${h}h ${m}m`
+  if (h) return `${h}h`
+  return `${m}m`
 }

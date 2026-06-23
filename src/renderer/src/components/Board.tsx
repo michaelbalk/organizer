@@ -104,8 +104,8 @@ function TaskCard({
   onToggleDone: () => void
 }): JSX.Element {
   const priority = TASK_PRIORITIES.find((p) => p.id === task.priority)!
-  const overdue =
-    task.dueDate && task.status !== 'done' && task.dueDate < new Date().toISOString().slice(0, 10)
+  const overdue = isOverdue(task)
+  const duration = durationChip(task)
 
   return (
     <div
@@ -142,8 +142,12 @@ function TaskCard({
           </span>
         )}
         {task.dueDate && (
-          <span className={`chip due ${overdue ? 'overdue' : ''}`}>📆 {task.dueDate}</span>
+          <span className={`chip due ${overdue ? 'overdue' : ''}`}>
+            📆 {task.dueDate}
+            {task.dueTime ? ` ${task.dueTime}` : ''}
+          </span>
         )}
+        {duration && <span className="chip">{duration}</span>}
         {task.tags.map((tag) => (
           <span key={tag} className="chip tag">
             #{tag}
@@ -153,4 +157,29 @@ function TaskCard({
       </div>
     </div>
   )
+}
+
+/** A task is overdue once its due moment passes (end-of-day when no time set). */
+function isOverdue(task: Task): boolean {
+  if (!task.dueDate || task.status === 'done') return false
+  const due = new Date(`${task.dueDate}T${task.dueTime || '23:59'}`)
+  return due.getTime() < Date.now()
+}
+
+/** Compact estimate/actual chip, e.g. "⏱ 30m → 45m". */
+function durationChip(task: Task): string | null {
+  const e = task.estimateMinutes
+  const a = task.actualMinutes
+  if (e == null && a == null) return null
+  if (e != null && a != null) return `⏱ ${fmtMinutes(e)} → ${fmtMinutes(a)}`
+  if (e != null) return `⏱ ${fmtMinutes(e)} est`
+  return `⏱ ${fmtMinutes(a as number)} actual`
+}
+
+function fmtMinutes(min: number): string {
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  if (h && m) return `${h}h ${m}m`
+  if (h) return `${h}h`
+  return `${m}m`
 }

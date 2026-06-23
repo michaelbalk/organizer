@@ -56,6 +56,13 @@ class Store {
     data.workspaces ??= []
     data.accounts ??= []
     data.tasks ??= []
+    // Backfill scheduling fields added after first release.
+    data.tasks = data.tasks.map((t) => ({
+      ...t,
+      dueTime: t.dueTime ?? null,
+      estimateMinutes: t.estimateMinutes ?? null,
+      actualMinutes: t.actualMinutes ?? null
+    }))
     data.dismissedEmails ??= []
     data.folders ??= []
     return data
@@ -232,6 +239,9 @@ class Store {
       priority: input.priority ?? 'medium',
       workspaceId: input.workspaceId ?? this.data.workspaces[0]?.id ?? '',
       dueDate: input.dueDate ?? null,
+      dueTime: input.dueTime ?? null,
+      estimateMinutes: input.estimateMinutes ?? null,
+      actualMinutes: input.actualMinutes ?? null,
       tags: input.tags ?? [],
       source: input.source ?? null,
       order: this.nextOrder(status),

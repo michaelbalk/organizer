@@ -40,6 +40,12 @@ export interface Task {
   workspaceId: string
   /** ISO date (YYYY-MM-DD) or null. */
   dueDate: string | null
+  /** Optional time-of-day (HH:mm) paired with dueDate for a precise deadline. */
+  dueTime: string | null
+  /** Expected duration in minutes (planning estimate), or null. */
+  estimateMinutes: number | null
+  /** Actual time spent in minutes (tracked after the fact), or null. */
+  actualMinutes: number | null
   /** Free-form labels. */
   tags: string[]
   /** Optional link back to the email/event this task came from. Phase 2. */
