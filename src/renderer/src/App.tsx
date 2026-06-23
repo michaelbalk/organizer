@@ -167,6 +167,7 @@ export default function App(): JSX.Element {
               folderMeta={data.folders}
               requestedFolder={inboxFolder}
               onFolderOpened={clearInboxFolder}
+              onManageFolders={() => setView('folders')}
               onChanged={refresh}
               onGoToSettings={() => setView('settings')}
             />

@@ -15,6 +15,8 @@ interface Props {
   requestedFolder: string | null
   /** Called once the requested folder has been opened, to clear the request. */
   onFolderOpened: () => void
+  /** Jump to the Folders view to add/rename/recolor folders. */
+  onManageFolders: () => void
   onChanged: () => Promise<void>
   onGoToSettings: () => void
 }
@@ -35,6 +37,7 @@ export function Inbox({
   folderMeta,
   requestedFolder,
   onFolderOpened,
+  onManageFolders,
   onChanged,
   onGoToSettings
 }: Props): JSX.Element {
@@ -244,7 +247,36 @@ export function Inbox({
   }
 
   return (
-    <div className="inbox-split">
+    <div className="inbox-triple">
+      <aside className="folder-rail">
+        <div className="folder-rail-head">
+          <span>Folders</span>
+          <button className="link-btn" onClick={onManageFolders}>
+            Manage
+          </button>
+        </div>
+        <div className="folder-rail-list">
+          <button
+            className={`folder-row ${inInbox ? 'active' : ''}`}
+            onClick={() => selectFolder('inbox')}
+          >
+            <span className="folder-row-icon">📥</span>
+            <span className="folder-row-name">Inbox</span>
+          </button>
+          {folders.map((f) => (
+            <button
+              key={f}
+              className={`folder-row ${folder === f ? 'active' : ''}`}
+              onClick={() => selectFolder(f)}
+              title={f}
+            >
+              <span className="folder-dot" style={{ background: folderColor.get(f) ?? '#64748b' }} />
+              <span className="folder-row-name">{f}</span>
+            </button>
+          ))}
+        </div>
+      </aside>
+
       <div className="inbox-list-col">
         {result?.errors.map((err) => (
           <div key={err.accountId} className="banner banner-warn">
@@ -256,26 +288,6 @@ export function Inbox({
             )}
           </div>
         ))}
-
-        <div className="folder-bar">
-          <button
-            className={`folder-chip ${inInbox ? 'active' : ''}`}
-            onClick={() => selectFolder('inbox')}
-          >
-            📥 Inbox
-          </button>
-          {folders.map((f) => (
-            <button
-              key={f}
-              className={`folder-chip ${folder === f ? 'active' : ''}`}
-              onClick={() => selectFolder(f)}
-              title={f}
-            >
-              <span className="folder-dot" style={{ background: folderColor.get(f) ?? '#64748b' }} />
-              {f}
-            </button>
-          ))}
-        </div>
 
         <div className="inbox-head">
           <div>
