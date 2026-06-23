@@ -22,6 +22,7 @@ import {
   deleteFolder,
   listFolderMessages
 } from './google/gmail'
+import { listCalendarEvents } from './google/calendar'
 import type {
   Account,
   DraftReplyInput,
@@ -118,4 +119,7 @@ export function registerIpc(): void {
   // Claude assistant
   ipcMain.handle(IPC.anthropicConfigured, () => isAnthropicConfigured())
   ipcMain.handle(IPC.draftReply, (_e, input: DraftReplyInput) => draftReply(input))
+
+  // Calendar
+  ipcMain.handle(IPC.listCalendar, (_e, daysAhead?: number) => listCalendarEvents(daysAhead))
 }

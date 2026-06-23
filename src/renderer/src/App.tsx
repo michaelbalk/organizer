@@ -4,9 +4,9 @@ import { Sidebar } from './components/Sidebar'
 import { Board } from './components/Board'
 import { TaskModal } from './components/TaskModal'
 import { WorkspaceModal } from './components/WorkspaceModal'
-import { Placeholder } from './components/Placeholder'
 import { Accounts } from './components/Accounts'
 import { Inbox } from './components/Inbox'
+import { Calendar } from './components/Calendar'
 import { Folders } from './components/Folders'
 
 export type View = 'board' | 'email' | 'folders' | 'calendar' | 'settings'
@@ -181,10 +181,13 @@ export default function App(): JSX.Element {
             />
           )}
           {view === 'calendar' && (
-            <Placeholder
-              icon="📅"
-              title="Combined Calendar — coming in Phase 2"
-              body="Overlay every Google Calendar across your personal and business accounts, color-coded by workspace."
+            <Calendar
+              accounts={data.accounts}
+              workspaceById={workspaceById}
+              tasks={data.tasks}
+              onEditTask={(task) => setTaskModal({ open: true, task })}
+              onChanged={refresh}
+              onGoToSettings={() => setView('settings')}
             />
           )}
           {view === 'settings' && (

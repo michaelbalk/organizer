@@ -36,7 +36,9 @@ export const IPC = {
   listFolderMessages: 'folder:messages',
   // Claude assistant
   anthropicConfigured: 'claude:configured',
-  draftReply: 'claude:draft'
+  draftReply: 'claude:draft',
+  // Calendar
+  listCalendar: 'calendar:list'
 } as const
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC]

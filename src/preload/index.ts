@@ -3,6 +3,7 @@ import { IPC } from '@shared/ipc'
 import type {
   Account,
   AppData,
+  CalendarResult,
   DraftReplyInput,
   EmailFull,
   GmailLabel,
@@ -81,7 +82,11 @@ const api = {
   // Claude assistant
   isAnthropicConfigured: (): Promise<boolean> => ipcRenderer.invoke(IPC.anthropicConfigured),
   draftReply: (input: DraftReplyInput): Promise<string> =>
-    ipcRenderer.invoke(IPC.draftReply, input)
+    ipcRenderer.invoke(IPC.draftReply, input),
+
+  // Calendar
+  listCalendar: (daysAhead?: number): Promise<CalendarResult> =>
+    ipcRenderer.invoke(IPC.listCalendar, daysAhead)
 }
 
 export type OrganizerApi = typeof api

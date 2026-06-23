@@ -114,6 +114,31 @@ export interface InboxError {
   needsReconnect: boolean
 }
 
+/** A read-only calendar event projected from Google Calendar. */
+export interface CalendarEvent {
+  id: string
+  accountId: string
+  accountEmail: string
+  /** Workspace inherited from the owning account, for color-coding. */
+  workspaceId: string
+  calendarId: string
+  calendarName: string
+  title: string
+  /** ISO start/end. For all-day events these are local midnight boundaries. */
+  start: string
+  end: string
+  allDay: boolean
+  location: string
+  /** Link to the event in Google Calendar (opens in the browser). */
+  htmlLink: string
+}
+
+export interface CalendarResult {
+  events: CalendarEvent[]
+  errors: InboxError[]
+  fetchedAt: string
+}
+
 /** A fully-loaded message for the in-app reader. */
 export interface EmailFull {
   id: string
