@@ -129,8 +129,26 @@ export interface CalendarEvent {
   end: string
   allDay: boolean
   location: string
+  /** Attendee display names / addresses, for context in a brief. */
+  attendees: string[]
+  /** Existing event description/notes. */
+  description: string
   /** Link to the event in Google Calendar (opens in the browser). */
   htmlLink: string
+}
+
+/** Context handed to Claude to write a meeting brief. */
+export interface MeetingBriefInput {
+  accountEmail: string
+  title: string
+  /** Human-readable date/time. */
+  when: string
+  attendees?: string
+  location?: string
+  /** Existing event notes, if any. */
+  description?: string
+  /** Optional focus from the user. */
+  guidance?: string
 }
 
 export interface CalendarResult {

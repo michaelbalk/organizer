@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Account, CalendarEvent, CalendarResult, Task, Workspace } from '@shared/types'
+import { BriefModal } from './BriefModal'
 
 interface Props {
   accounts: Account[]
@@ -32,6 +33,8 @@ export function Calendar({
   const [result, setResult] = useState<CalendarResult | null>(null)
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState<string | null>(null)
+  // The event a brief is being written for, if any.
+  const [briefFor, setBriefFor] = useState<CalendarEvent | null>(null)
 
   const connected = accounts.filter((a) => a.provider === 'google' && a.connected)
 
@@ -188,6 +191,13 @@ export function Calendar({
                       <div className="cal-actions">
                         <button
                           className="btn btn-ghost btn-sm"
+                          onClick={() => setBriefFor(entry.ev)}
+                          title="Draft a meeting brief with Claude and attach it"
+                        >
+                          ✨ Brief
+                        </button>
+                        <button
+                          className="btn btn-ghost btn-sm"
                           onClick={() => entry.kind === 'event' && eventToTask(entry.ev)}
                           title="Create a task from this event"
                         >
@@ -232,6 +242,16 @@ export function Calendar({
       </div>
 
       {toast && <div className="toast">{toast}</div>}
+
+      {briefFor && (
+        <BriefModal
+          event={briefFor}
+          onClose={() => setBriefFor(null)}
+          onAttached={load}
+          onToast={setToast}
+          onGoToSettings={onGoToSettings}
+        />
+      )}
     </div>
   )
 }

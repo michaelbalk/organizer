@@ -1,4 +1,4 @@
-import type { DraftReplyInput } from '@shared/types'
+import type { DraftReplyInput, MeetingBriefInput } from '@shared/types'
 import { getAnthropicConfig, type AnthropicConfig } from './config'
 
 const MESSAGES_URL = 'https://api.anthropic.com/v1/messages'
@@ -69,6 +69,35 @@ function buildUserPrompt(input: DraftReplyInput): string {
     lines.push('Write an appropriate, helpful reply.')
   }
   return lines.join('\n')
+}
+
+/** Drafts a concise, skimmable meeting brief with Claude. */
+export async function draftMeetingBrief(input: MeetingBriefInput): Promise<string> {
+  const cfg = getAnthropicConfig()
+  if (!cfg) {
+    throw new Error('Claude is not configured. Add ANTHROPIC_API_KEY to your .env file.')
+  }
+
+  const system = [
+    `You are an executive assistant preparing ${input.accountEmail} for a meeting.`,
+    'Write a concise, skimmable brief in plain text (no markdown headings or "#").',
+    'Include, in this order: a one-line purpose; a short agenda (3-5 bullets using "-"); key context or background; and 2-3 sharp questions or talking points to raise.',
+    'Keep it under ~200 words. Output only the brief — no preamble.'
+  ].join(' ')
+
+  const lines = [
+    `Meeting: ${input.title}`,
+    `When: ${input.when}`,
+    input.attendees ? `Attendees: ${input.attendees}` : '',
+    input.location ? `Location: ${input.location}` : '',
+    input.description ? `Existing notes: ${input.description}` : '',
+    '',
+    input.guidance
+      ? `Focus the brief on: ${input.guidance}`
+      : 'Prepare me to lead this meeting effectively.'
+  ].filter(Boolean)
+
+  return callClaude(cfg, system, lines.join('\n'))
 }
 
 async function callClaude(cfg: AnthropicConfig, system: string, userText: string): Promise<string> {

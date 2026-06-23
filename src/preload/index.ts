@@ -5,6 +5,7 @@ import type {
   AppData,
   CalendarResult,
   DraftReplyInput,
+  MeetingBriefInput,
   EmailFull,
   GmailLabel,
   InboxResult,
@@ -83,10 +84,19 @@ const api = {
   isAnthropicConfigured: (): Promise<boolean> => ipcRenderer.invoke(IPC.anthropicConfigured),
   draftReply: (input: DraftReplyInput): Promise<string> =>
     ipcRenderer.invoke(IPC.draftReply, input),
+  draftMeetingBrief: (input: MeetingBriefInput): Promise<string> =>
+    ipcRenderer.invoke(IPC.draftMeetingBrief, input),
 
   // Calendar
   listCalendar: (daysAhead?: number): Promise<CalendarResult> =>
-    ipcRenderer.invoke(IPC.listCalendar, daysAhead)
+    ipcRenderer.invoke(IPC.listCalendar, daysAhead),
+  attachEventBrief: (
+    accountId: string,
+    calendarId: string,
+    eventId: string,
+    brief: string
+  ): Promise<void> =>
+    ipcRenderer.invoke(IPC.attachEventBrief, accountId, calendarId, eventId, brief)
 }
 
 export type OrganizerApi = typeof api

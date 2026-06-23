@@ -37,8 +37,10 @@ export const IPC = {
   // Claude assistant
   anthropicConfigured: 'claude:configured',
   draftReply: 'claude:draft',
+  draftMeetingBrief: 'claude:brief',
   // Calendar
-  listCalendar: 'calendar:list'
+  listCalendar: 'calendar:list',
+  attachEventBrief: 'calendar:attachBrief'
 } as const
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC]

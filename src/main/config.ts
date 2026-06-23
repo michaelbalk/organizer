@@ -17,7 +17,8 @@ const DEFAULT_SCOPES = [
   // gmail.modify includes read access plus label/archive/trash/mark-read.
   'https://www.googleapis.com/auth/gmail.modify',
   'https://www.googleapis.com/auth/gmail.send',
-  'https://www.googleapis.com/auth/calendar.readonly'
+  // Full calendar: read events + write meeting briefs into event descriptions.
+  'https://www.googleapis.com/auth/calendar'
 ]
 
 /** Returns the configured Google OAuth credentials, or null if not set up yet. */

@@ -2,7 +2,7 @@ import { ipcMain, shell } from 'electron'
 import { IPC } from '@shared/ipc'
 import { getStore } from './store'
 import { isGoogleConfigured, isAnthropicConfigured } from './config'
-import { draftReply } from './anthropic'
+import { draftReply, draftMeetingBrief } from './anthropic'
 import {
   connectGoogleAccount,
   disconnectGoogleAccount,
@@ -22,11 +22,12 @@ import {
   deleteFolder,
   listFolderMessages
 } from './google/gmail'
-import { listCalendarEvents } from './google/calendar'
+import { listCalendarEvents, attachEventBrief } from './google/calendar'
 import type {
   Account,
   DraftReplyInput,
   MailActionKind,
+  MeetingBriefInput,
   NewTaskInput,
   NewWorkspaceInput,
   SendEmailInput,
@@ -119,7 +120,13 @@ export function registerIpc(): void {
   // Claude assistant
   ipcMain.handle(IPC.anthropicConfigured, () => isAnthropicConfigured())
   ipcMain.handle(IPC.draftReply, (_e, input: DraftReplyInput) => draftReply(input))
+  ipcMain.handle(IPC.draftMeetingBrief, (_e, input: MeetingBriefInput) => draftMeetingBrief(input))
 
   // Calendar
   ipcMain.handle(IPC.listCalendar, (_e, daysAhead?: number) => listCalendarEvents(daysAhead))
+  ipcMain.handle(
+    IPC.attachEventBrief,
+    (_e, accountId: string, calendarId: string, eventId: string, brief: string) =>
+      attachEventBrief(accountId, calendarId, eventId, brief)
+  )
 }

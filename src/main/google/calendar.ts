@@ -14,11 +14,15 @@ interface GEvent {
   id: string
   summary?: string
   location?: string
+  description?: string
   htmlLink?: string
   status?: string
   start?: { dateTime?: string; date?: string }
   end?: { dateTime?: string; date?: string }
+  attendees?: { email?: string; displayName?: string }[]
 }
+
+const BRIEF_HEADER = '— Meeting brief (added by Organizer) —'
 
 /**
  * Lists events from today through `daysAhead` across every connected account and
@@ -104,8 +108,32 @@ function projectEvent(
     end: allDay ? new Date(`${endRaw}T00:00`).toISOString() : endRaw,
     allDay,
     location: e.location ?? '',
+    attendees: (e.attendees ?? []).map((a) => a.displayName || a.email || '').filter(Boolean),
+    description: e.description ?? '',
     htmlLink: e.htmlLink ?? ''
   }
+}
+
+/**
+ * Writes a meeting brief into a calendar event's description, under a marker so
+ * re-running replaces the prior brief while preserving any pre-existing notes.
+ * Requires the calendar write scope (re-consent after the scope widening).
+ */
+export async function attachEventBrief(
+  accountId: string,
+  calendarId: string,
+  eventId: string,
+  briefText: string
+): Promise<void> {
+  const client = getAuthorizedClient(accountId)
+  const url = `${CAL_BASE}/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`
+
+  const { data } = await client.request<{ description?: string }>({ url })
+  const existing = data.description ?? ''
+  const base = existing.split(BRIEF_HEADER)[0].trimEnd()
+  const description = `${base ? base + '\n\n' : ''}${BRIEF_HEADER}\n${briefText.trim()}`
+
+  await client.request({ url, method: 'PATCH', data: { description } })
 }
 
 interface HttpishError {
