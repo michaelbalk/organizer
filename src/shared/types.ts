@@ -161,15 +161,16 @@ export interface SendEmailInput {
 
 export type MailActionKind = 'archive' | 'trash' | 'markRead' | 'markUnread'
 
-/** Context handed to Claude to draft an email reply/forward note. */
+/** Context handed to Claude to draft an email (reply, forward note, or new message). */
 export interface DraftReplyInput {
   accountEmail: string
-  mode: 'reply' | 'replyAll' | 'forward'
-  fromName: string
-  subject: string
-  /** Plain-text body of the original message. */
-  originalBody: string
-  /** Optional free-text instruction on what the reply should say. */
+  mode: 'reply' | 'replyAll' | 'forward' | 'new'
+  /** Original sender — omitted for a brand-new message. */
+  fromName?: string
+  subject?: string
+  /** Plain-text body of the original message — omitted for a new message. */
+  originalBody?: string
+  /** Free-text instruction on what to write (required for a new message). */
   guidance?: string
 }
 

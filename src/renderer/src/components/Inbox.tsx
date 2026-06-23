@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Account, EmailItem, InboxResult, Task, Workspace } from '@shared/types'
 import { MessageReader } from './MessageReader'
+import { Compose } from './Compose'
 
 interface Props {
   accounts: Account[]
@@ -35,6 +36,8 @@ export function Inbox({
 
   // The email currently open in the in-app reader, if any.
   const [reading, setReading] = useState<EmailItem | null>(null)
+  // Whether the "new email" composer is open.
+  const [composing, setComposing] = useState(false)
 
   // Focus-triage snapshot: a frozen queue we step through one item at a time.
   const [triage, setTriage] = useState<{ queue: EmailItem[]; index: number } | null>(null)
@@ -222,8 +225,11 @@ export function Inbox({
             <button className="btn btn-ghost btn-sm" onClick={load} disabled={loading}>
               {loading ? '…' : '↻'}
             </button>
-            <button className="btn btn-primary btn-sm" onClick={startTriage} disabled={pile.length === 0}>
+            <button className="btn btn-ghost btn-sm" onClick={startTriage} disabled={pile.length === 0}>
               ⚡ Triage
+            </button>
+            <button className="btn btn-primary btn-sm" onClick={() => setComposing(true)}>
+              ✏️ Compose
             </button>
           </div>
         </div>
@@ -322,6 +328,10 @@ export function Inbox({
           onSkip={advance}
           onExit={() => setTriage(null)}
         />
+      )}
+
+      {composing && (
+        <Compose accounts={connected} onClose={() => setComposing(false)} onToast={setToast} />
       )}
     </div>
   )

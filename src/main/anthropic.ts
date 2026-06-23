@@ -29,9 +29,11 @@ export async function draftReply(input: DraftReplyInput): Promise<string> {
 
 function buildSystemPrompt(input: DraftReplyInput): string {
   const role =
-    input.mode === 'forward'
-      ? `You are an email assistant writing a brief note to accompany an email that ${input.accountEmail} is forwarding.`
-      : `You are an email assistant drafting a reply that ${input.accountEmail} will send.`
+    input.mode === 'new'
+      ? `You are an email assistant drafting a brand-new email that ${input.accountEmail} will send.`
+      : input.mode === 'forward'
+        ? `You are an email assistant writing a brief note to accompany an email that ${input.accountEmail} is forwarding.`
+        : `You are an email assistant drafting a reply that ${input.accountEmail} will send.`
   return [
     role,
     'Write in a warm, clear, professional tone, matched to the original message.',
@@ -41,17 +43,24 @@ function buildSystemPrompt(input: DraftReplyInput): string {
 }
 
 function buildUserPrompt(input: DraftReplyInput): string {
+  const guidance = input.guidance?.trim()
+
+  // A brand-new message has no original to quote — drive entirely off guidance.
+  if (input.mode === 'new') {
+    const lines: string[] = []
+    if (input.subject?.trim()) lines.push(`The email subject is: ${input.subject.trim()}`)
+    lines.push(guidance ? `Write an email that: ${guidance}` : 'Write a clear, friendly email.')
+    return lines.join('\n')
+  }
+
   const lines = [
-    input.mode === 'forward'
-      ? 'You are forwarding this email:'
-      : 'You are replying to this email:',
-    `From: ${input.fromName}`,
-    `Subject: ${input.subject}`,
+    input.mode === 'forward' ? 'You are forwarding this email:' : 'You are replying to this email:',
+    `From: ${input.fromName ?? ''}`,
+    `Subject: ${input.subject ?? ''}`,
     '',
-    input.originalBody.slice(0, MAX_BODY_CHARS),
+    (input.originalBody ?? '').slice(0, MAX_BODY_CHARS),
     ''
   ]
-  const guidance = input.guidance?.trim()
   if (guidance) {
     lines.push(`Write the message so it conveys: ${guidance}`)
   } else if (input.mode === 'forward') {

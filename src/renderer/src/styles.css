@@ -1183,6 +1183,14 @@ button {
   min-height: 120px;
   line-height: 1.45;
 }
+.compose-modal .modal-body {
+  gap: 12px;
+}
+.compose-body {
+  min-height: 200px;
+  resize: vertical;
+  line-height: 1.45;
+}
 .composer-ai {
   display: flex;
   gap: 8px;
