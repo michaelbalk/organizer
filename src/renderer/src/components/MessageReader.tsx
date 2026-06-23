@@ -12,6 +12,8 @@ interface Props {
   onServerChanged: () => Promise<void>
   /** Close the reading pane (e.g. after the message leaves the inbox). */
   onDeselect: () => void
+  /** Jump to Settings to reconnect the account (used on scope errors). */
+  onGoToSettings: () => void
 }
 
 type ComposerMode = 'reply' | 'replyAll' | 'forward'
@@ -36,10 +38,12 @@ export function MessageReader({
   onToast,
   onCapture,
   onServerChanged,
-  onDeselect
+  onDeselect,
+  onGoToSettings
 }: Props): JSX.Element {
   const [full, setFull] = useState<EmailFull | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<{ message: string; reconnect: boolean } | null>(null)
   const [showImages, setShowImages] = useState(false)
   const [busy, setBusy] = useState(false)
   const [composer, setComposer] = useState<ComposerState | null>(null)
@@ -50,17 +54,25 @@ export function MessageReader({
     let alive = true
     setFull(null)
     setError(null)
+    setActionError(null)
     setShowImages(false)
     setComposer(null)
     setFileOpen(false)
     window.api
       .getMessage(email.accountId, email.id)
       .then((m) => alive && setFull(m))
-      .catch((e: unknown) => alive && setError(errMessage(e)))
+      .catch((e: unknown) => alive && setError(classifyError(e).message))
     return () => {
       alive = false
     }
   }, [email.accountId, email.id])
+
+  /** Routes a failure to a persistent banner (scope) or a transient toast. */
+  const reportError = (e: unknown): void => {
+    const info = classifyError(e)
+    if (info.reconnect) setActionError(info)
+    else onToast(info.message)
+  }
 
   const srcDoc = useMemo(
     () => (full ? buildSrcDoc(full.bodyHtml, showImages) : ''),
@@ -71,6 +83,7 @@ export function MessageReader({
 
   const runAction = async (action: MailActionKind): Promise<void> => {
     setBusy(true)
+    setActionError(null)
     try {
       await window.api.mailAction(email.accountId, email.id, action)
       onToast(ACTION_TOAST[action])
@@ -78,7 +91,7 @@ export function MessageReader({
       if (action === 'archive' || action === 'trash') onDeselect()
       else setFull((f) => (f ? { ...f, unread: action === 'markUnread' } : f))
     } catch (e) {
-      onToast(errMessage(e))
+      reportError(e)
     } finally {
       setBusy(false)
     }
@@ -90,7 +103,7 @@ export function MessageReader({
       try {
         setLabels(await window.api.listLabels(email.accountId))
       } catch (e) {
-        onToast(errMessage(e))
+        reportError(e)
         setLabels([])
       }
     }
@@ -105,7 +118,7 @@ export function MessageReader({
       await onServerChanged()
       onDeselect()
     } catch (e) {
-      onToast(errMessage(e))
+      reportError(e)
     } finally {
       setBusy(false)
     }
@@ -146,7 +159,7 @@ export function MessageReader({
       setComposer(null)
       await onServerChanged()
     } catch (e) {
-      onToast(errMessage(e))
+      reportError(e)
       setComposer((c) => (c ? { ...c, sending: false } : c))
     }
   }
@@ -228,6 +241,17 @@ export function MessageReader({
           + Task
         </button>
       </div>
+
+      {actionError && (
+        <div className="banner banner-warn reader-action-error">
+          <span>{actionError.message}</span>
+          {actionError.reconnect && (
+            <button className="link-btn" onClick={onGoToSettings}>
+              Reconnect in Settings
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="reader-body">
         {error ? (
@@ -381,9 +405,15 @@ function formatFull(iso: string): string {
   })
 }
 
-function errMessage(e: unknown): string {
+/** Classifies a failure; scope/auth problems become a "reconnect" banner. */
+function classifyError(e: unknown): { message: string; reconnect: boolean } {
   const m = e instanceof Error ? e.message : String(e)
-  return /scope|insufficient|invalid_grant|not connected|PERMISSION_DENIED/i.test(m)
-    ? 'That action needs reconnecting this account in Settings (to grant send/modify permission).'
-    : m
+  if (/scope|insufficient|invalid_grant|not connected|PERMISSION_DENIED/i.test(m)) {
+    return {
+      message:
+        'This account needs to be reconnected to grant send & organize permissions. Your sign-in predates them.',
+      reconnect: true
+    }
+  }
+  return { message: m, reconnect: false }
 }

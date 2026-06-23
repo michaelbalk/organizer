@@ -1071,6 +1071,13 @@ button {
 .reader-actions-gap {
   flex: 1;
 }
+.reader-action-error {
+  margin: 10px 18px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
 .file-wrap {
   position: relative;
 }

@@ -297,6 +297,7 @@ export function Inbox({
             onCapture={capture}
             onServerChanged={load}
             onDeselect={() => setReading(null)}
+            onGoToSettings={onGoToSettings}
           />
         ) : (
           <div className="reader-empty">
