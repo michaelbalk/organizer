@@ -11,6 +11,10 @@ interface Props {
   dismissedEmails: string[]
   /** Folder color/note metadata, used to tint the folder chips. */
   folderMeta: FolderMeta[]
+  /** When set, open this folder's emails (e.g. clicked from the Folders view). */
+  requestedFolder: string | null
+  /** Called once the requested folder has been opened, to clear the request. */
+  onFolderOpened: () => void
   onChanged: () => Promise<void>
   onGoToSettings: () => void
 }
@@ -29,6 +33,8 @@ export function Inbox({
   tasks,
   dismissedEmails,
   folderMeta,
+  requestedFolder,
+  onFolderOpened,
   onChanged,
   onGoToSettings
 }: Props): JSX.Element {
@@ -80,6 +86,14 @@ export function Inbox({
     setFolder(f)
     setReading(null)
   }, [])
+
+  // Honor a folder open requested from elsewhere (e.g. the Folders view).
+  useEffect(() => {
+    if (requestedFolder) {
+      selectFolder(requestedFolder)
+      onFolderOpened()
+    }
+  }, [requestedFolder, selectFolder, onFolderOpened])
 
   // Folder name -> color, for tinting the browse chips.
   const folderColor = useMemo(() => {

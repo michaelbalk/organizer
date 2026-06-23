@@ -38,6 +38,14 @@ export default function App(): JSX.Element {
     task: null
   })
   const [wsModalOpen, setWsModalOpen] = useState(false)
+  // A pending request to open a specific folder's emails in the Inbox.
+  const [inboxFolder, setInboxFolder] = useState<string | null>(null)
+
+  const openFolderEmails = useCallback((name: string) => {
+    setInboxFolder(name)
+    setView('email')
+  }, [])
+  const clearInboxFolder = useCallback(() => setInboxFolder(null), [])
 
   const refresh = useCallback(async () => {
     const next = await window.api.getData()
@@ -157,12 +165,19 @@ export default function App(): JSX.Element {
               tasks={data.tasks}
               dismissedEmails={data.dismissedEmails}
               folderMeta={data.folders}
+              requestedFolder={inboxFolder}
+              onFolderOpened={clearInboxFolder}
               onChanged={refresh}
               onGoToSettings={() => setView('settings')}
             />
           )}
           {view === 'folders' && (
-            <Folders folderMeta={data.folders} accounts={data.accounts} onChanged={refresh} />
+            <Folders
+              folderMeta={data.folders}
+              accounts={data.accounts}
+              onChanged={refresh}
+              onOpenFolder={openFolderEmails}
+            />
           )}
           {view === 'calendar' && (
             <Placeholder

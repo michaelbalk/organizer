@@ -7,12 +7,14 @@ interface Props {
   accounts: Account[]
   /** Refresh the app's persisted state after a metadata change. */
   onChanged: () => Promise<void>
+  /** Open this folder's emails in the Inbox. */
+  onOpenFolder: (name: string) => void
 }
 
 const DEFAULT_COLOR = '#64748b'
 
 /** Folder (Gmail label) manager: create, rename, recolor, annotate, delete. */
-export function Folders({ folderMeta, accounts, onChanged }: Props): JSX.Element {
+export function Folders({ folderMeta, accounts, onChanged, onOpenFolder }: Props): JSX.Element {
   const [names, setNames] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -142,6 +144,7 @@ export function Folders({ folderMeta, accounts, onChanged }: Props): JSX.Element
             <FolderCard
               key={name}
               meta={metaFor(name)}
+              onOpen={() => onOpenFolder(name)}
               onRename={(next) => rename(name, next)}
               onRecolor={(color) => recolor(name, color)}
               onNote={(note) => setNote(name, note)}
@@ -156,12 +159,14 @@ export function Folders({ folderMeta, accounts, onChanged }: Props): JSX.Element
 
 function FolderCard({
   meta,
+  onOpen,
   onRename,
   onRecolor,
   onNote,
   onDelete
 }: {
   meta: FolderMeta
+  onOpen: () => void
   onRename: (next: string) => void
   onRecolor: (color: string) => void
   onNote: (note: string) => void
@@ -193,6 +198,9 @@ function FolderCard({
             if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
           }}
         />
+        <button className="btn btn-ghost btn-sm" onClick={onOpen} title="Open this folder's emails">
+          ✉ Open
+        </button>
         <button className="btn btn-danger-ghost btn-sm" onClick={onDelete}>
           Delete
         </button>
