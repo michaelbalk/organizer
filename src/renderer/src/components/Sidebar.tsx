@@ -52,6 +52,12 @@ export function Sidebar({
           <span>✉️</span> Inbox
         </button>
         <button
+          className={`nav-view ${view === 'folders' ? 'active' : ''}`}
+          onClick={() => onViewChange('folders')}
+        >
+          <span>🗂️</span> Folders
+        </button>
+        <button
           className={`nav-view ${view === 'calendar' ? 'active' : ''}`}
           onClick={() => onViewChange('calendar')}
         >

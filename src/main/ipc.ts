@@ -18,6 +18,7 @@ import {
   sendEmail,
   listFolders,
   createFolder,
+  renameFolder,
   deleteFolder,
   listFolderMessages
 } from './google/gmail'
@@ -91,10 +92,25 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.listLabels, (_e, accountId: string) => listLabels(accountId))
   ipcMain.handle(IPC.sendEmail, (_e, input: SendEmailInput) => sendEmail(input))
 
-  // Folders (Gmail labels)
+  // Folders (Gmail labels + local color/note metadata)
   ipcMain.handle(IPC.listFolders, () => listFolders())
-  ipcMain.handle(IPC.createFolder, (_e, name: string) => createFolder(name))
-  ipcMain.handle(IPC.deleteFolder, (_e, name: string) => deleteFolder(name))
+  ipcMain.handle(IPC.createFolder, async (_e, name: string, color?: string, note?: string) => {
+    await createFolder(name)
+    store.upsertFolderMeta(name.trim(), { color, note })
+  })
+  ipcMain.handle(IPC.renameFolder, async (_e, oldName: string, newName: string) => {
+    await renameFolder(oldName, newName)
+    store.renameFolderMeta(oldName, newName.trim())
+  })
+  ipcMain.handle(IPC.deleteFolder, async (_e, name: string) => {
+    await deleteFolder(name)
+    store.deleteFolderMeta(name)
+  })
+  ipcMain.handle(
+    IPC.updateFolderMeta,
+    (_e, name: string, patch: { color?: string; note?: string }) =>
+      store.upsertFolderMeta(name, patch)
+  )
   ipcMain.handle(IPC.listFolderMessages, (_e, name: string, max?: number) =>
     listFolderMessages(name, max)
   )

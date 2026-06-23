@@ -66,10 +66,15 @@ const api = {
     ipcRenderer.invoke(IPC.listLabels, accountId),
   sendEmail: (input: SendEmailInput): Promise<void> => ipcRenderer.invoke(IPC.sendEmail, input),
 
-  // Folders (Gmail labels)
+  // Folders (Gmail labels + local color/note metadata)
   listFolders: (): Promise<string[]> => ipcRenderer.invoke(IPC.listFolders),
-  createFolder: (name: string): Promise<void> => ipcRenderer.invoke(IPC.createFolder, name),
+  createFolder: (name: string, color?: string, note?: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.createFolder, name, color, note),
+  renameFolder: (oldName: string, newName: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.renameFolder, oldName, newName),
   deleteFolder: (name: string): Promise<void> => ipcRenderer.invoke(IPC.deleteFolder, name),
+  updateFolderMeta: (name: string, patch: { color?: string; note?: string }): Promise<void> =>
+    ipcRenderer.invoke(IPC.updateFolderMeta, name, patch),
   listFolderMessages: (name: string, max?: number): Promise<InboxResult> =>
     ipcRenderer.invoke(IPC.listFolderMessages, name, max),
 

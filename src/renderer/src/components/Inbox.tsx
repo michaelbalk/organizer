@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { Account, EmailItem, InboxResult, Task, Workspace } from '@shared/types'
+import type { Account, EmailItem, FolderMeta, InboxResult, Task, Workspace } from '@shared/types'
 import { MessageReader } from './MessageReader'
 import { Compose } from './Compose'
 
@@ -9,6 +9,8 @@ interface Props {
   workspaceById: Map<string, Workspace>
   tasks: Task[]
   dismissedEmails: string[]
+  /** Folder color/note metadata, used to tint the folder chips. */
+  folderMeta: FolderMeta[]
   onChanged: () => Promise<void>
   onGoToSettings: () => void
 }
@@ -26,6 +28,7 @@ export function Inbox({
   workspaceById,
   tasks,
   dismissedEmails,
+  folderMeta,
   onChanged,
   onGoToSettings
 }: Props): JSX.Element {
@@ -42,8 +45,6 @@ export function Inbox({
   // Folder view: 'inbox' or a Gmail label name. Plus the available folders.
   const [folder, setFolder] = useState<string>('inbox')
   const [folders, setFolders] = useState<string[]>([])
-  // Inline "new folder" input value; null when not creating.
-  const [newFolder, setNewFolder] = useState<string | null>(null)
 
   // Focus-triage snapshot: a frozen queue we step through one item at a time.
   const [triage, setTriage] = useState<{ queue: EmailItem[]; index: number } | null>(null)
@@ -80,34 +81,12 @@ export function Inbox({
     setReading(null)
   }, [])
 
-  const createFolderNow = useCallback(async () => {
-    const name = (newFolder ?? '').trim()
-    setNewFolder(null)
-    if (!name) return
-    try {
-      await window.api.createFolder(name)
-      await loadFolders()
-      selectFolder(name)
-      setToast(`Folder “${name}” created`)
-    } catch (e) {
-      setToast(e instanceof Error ? e.message : 'Could not create folder')
-    }
-  }, [newFolder, loadFolders, selectFolder])
-
-  const deleteFolderNow = useCallback(
-    async (name: string) => {
-      if (!window.confirm(`Delete the folder “${name}”?\n\nEmails are kept — they just lose this label.`)) return
-      try {
-        await window.api.deleteFolder(name)
-        await loadFolders()
-        selectFolder('inbox')
-        setToast(`Folder “${name}” deleted`)
-      } catch (e) {
-        setToast(e instanceof Error ? e.message : 'Could not delete folder')
-      }
-    },
-    [loadFolders, selectFolder]
-  )
+  // Folder name -> color, for tinting the browse chips.
+  const folderColor = useMemo(() => {
+    const map = new Map<string, string>()
+    folderMeta.forEach((f) => map.set(f.name, f.color))
+    return map
+  }, [folderMeta])
 
   useEffect(() => {
     if (!toast) return
@@ -278,28 +257,10 @@ export function Inbox({
               onClick={() => selectFolder(f)}
               title={f}
             >
-              🏷 {f}
+              <span className="folder-dot" style={{ background: folderColor.get(f) ?? '#64748b' }} />
+              {f}
             </button>
           ))}
-          {newFolder === null ? (
-            <button className="folder-chip add" onClick={() => setNewFolder('')} title="New folder">
-              ＋
-            </button>
-          ) : (
-            <span className="folder-new">
-              <input
-                autoFocus
-                value={newFolder}
-                placeholder="Folder name"
-                onChange={(e) => setNewFolder(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') void createFolderNow()
-                  else if (e.key === 'Escape') setNewFolder(null)
-                }}
-                onBlur={() => void createFolderNow()}
-              />
-            </span>
-          )}
         </div>
 
         <div className="inbox-head">
@@ -320,17 +281,13 @@ export function Inbox({
             <button className="btn btn-ghost btn-sm" onClick={load} disabled={loading}>
               {loading ? '…' : '↻'}
             </button>
-            {inInbox ? (
+            {inInbox && (
               <button
                 className="btn btn-ghost btn-sm"
                 onClick={startTriage}
                 disabled={pile.length === 0}
               >
                 ⚡ Triage
-              </button>
-            ) : (
-              <button className="btn btn-ghost btn-sm" onClick={() => deleteFolderNow(folder)}>
-                🗑 Delete
               </button>
             )}
             <button className="btn btn-primary btn-sm" onClick={() => setComposing(true)}>

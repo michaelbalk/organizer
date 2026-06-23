@@ -145,6 +145,16 @@ export interface GmailLabel {
   name: string
 }
 
+/**
+ * Local metadata for a folder (Gmail label), keyed by name. Gmail owns the
+ * label's existence; the app adds a color and a "why this folder exists" note.
+ */
+export interface FolderMeta {
+  name: string
+  color: string
+  note: string
+}
+
 /** Payload for sending a reply/forward/new message from the app. */
 export interface SendEmailInput {
   accountId: string
@@ -182,6 +192,8 @@ export interface AppData {
   tasks: Task[]
   /** Gmail message ids the user has triaged/dismissed locally (pruned to live inbox). */
   dismissedEmails: string[]
+  /** Local color/note metadata for folders (Gmail labels), keyed by name. */
+  folders: FolderMeta[]
 }
 
 /** Payload shapes for creating/updating tasks from the renderer. */

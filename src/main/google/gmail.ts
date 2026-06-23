@@ -419,6 +419,24 @@ export async function createFolder(name: string): Promise<void> {
   )
 }
 
+/** Renames the folder (label) in every account that has it. */
+export async function renameFolder(oldName: string, newName: string): Promise<void> {
+  const trimmed = newName.trim()
+  if (!trimmed) throw new Error('Folder name cannot be empty.')
+  await Promise.all(
+    connectedGoogleAccounts().map(async (acc) => {
+      const match = (await listLabels(acc.id)).find((l) => l.name === oldName)
+      if (!match) return
+      const client = getAuthorizedClient(acc.id)
+      await client.request({
+        url: `${GMAIL_BASE}/labels/${match.id}`,
+        method: 'PATCH',
+        data: { name: trimmed }
+      })
+    })
+  )
+}
+
 /** Deletes the folder (label) of this name from every account that has it. */
 export async function deleteFolder(name: string): Promise<void> {
   await Promise.all(

@@ -7,8 +7,9 @@ import { WorkspaceModal } from './components/WorkspaceModal'
 import { Placeholder } from './components/Placeholder'
 import { Accounts } from './components/Accounts'
 import { Inbox } from './components/Inbox'
+import { Folders } from './components/Folders'
 
-export type View = 'board' | 'email' | 'calendar' | 'settings'
+export type View = 'board' | 'email' | 'folders' | 'calendar' | 'settings'
 
 /** Sidebar selection: all tasks, a kind group, or a single workspace. */
 export type Selection =
@@ -21,7 +22,8 @@ const EMPTY: AppData = {
   workspaces: [],
   accounts: [],
   tasks: [],
-  dismissedEmails: []
+  dismissedEmails: [],
+  folders: []
 }
 
 export default function App(): JSX.Element {
@@ -69,6 +71,7 @@ export default function App(): JSX.Element {
 
   const headingTitle = useMemo(() => {
     if (view === 'email') return 'Inbox'
+    if (view === 'folders') return 'Folders'
     if (view === 'calendar') return 'Calendar'
     if (view === 'settings') return 'Settings'
     if (selection.type === 'all') return 'All Tasks'
@@ -111,9 +114,11 @@ export default function App(): JSX.Element {
                 ? `${visibleTasks.length} task${visibleTasks.length === 1 ? '' : 's'}`
                 : view === 'email'
                   ? 'Unified inbox'
-                  : view === 'calendar'
-                    ? 'Combined calendar'
-                    : 'Accounts & settings'}
+                  : view === 'folders'
+                    ? 'Create, organize & annotate your folders'
+                    : view === 'calendar'
+                      ? 'Combined calendar'
+                      : 'Accounts & settings'}
             </span>
           </div>
 
@@ -151,9 +156,13 @@ export default function App(): JSX.Element {
               workspaceById={workspaceById}
               tasks={data.tasks}
               dismissedEmails={data.dismissedEmails}
+              folderMeta={data.folders}
               onChanged={refresh}
               onGoToSettings={() => setView('settings')}
             />
+          )}
+          {view === 'folders' && (
+            <Folders folderMeta={data.folders} accounts={data.accounts} onChanged={refresh} />
           )}
           {view === 'calendar' && (
             <Placeholder

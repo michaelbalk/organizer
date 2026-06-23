@@ -5,6 +5,7 @@ import { randomUUID } from 'crypto'
 import type {
   Account,
   AppData,
+  FolderMeta,
   NewAccountInput,
   NewTaskInput,
   NewWorkspaceInput,
@@ -56,6 +57,7 @@ class Store {
     data.accounts ??= []
     data.tasks ??= []
     data.dismissedEmails ??= []
+    data.folders ??= []
     return data
   }
 
@@ -74,7 +76,8 @@ class Store {
       workspaces: [personal],
       accounts: [],
       tasks: [],
-      dismissedEmails: []
+      dismissedEmails: [],
+      folders: []
     }
     this.data = seeded
     this.persist()
@@ -181,6 +184,39 @@ class Store {
       this.data.dismissedEmails = kept
       this.persist()
     }
+  }
+
+  // --- Folder metadata (color/note for Gmail labels, keyed by name) -------
+
+  upsertFolderMeta(name: string, patch: Partial<Pick<FolderMeta, 'color' | 'note'>>): FolderMeta {
+    let meta = this.data.folders.find((f) => f.name === name)
+    if (!meta) {
+      meta = {
+        name,
+        color: patch.color ?? pickColor(this.data.folders.length),
+        note: patch.note ?? ''
+      }
+      this.data.folders.push(meta)
+    } else {
+      if (patch.color !== undefined) meta.color = patch.color
+      if (patch.note !== undefined) meta.note = patch.note
+    }
+    this.persist()
+    return meta
+  }
+
+  renameFolderMeta(oldName: string, newName: string): void {
+    const meta = this.data.folders.find((f) => f.name === oldName)
+    if (meta) {
+      meta.name = newName
+      this.persist()
+    }
+  }
+
+  deleteFolderMeta(name: string): void {
+    const before = this.data.folders.length
+    this.data.folders = this.data.folders.filter((f) => f.name !== name)
+    if (this.data.folders.length !== before) this.persist()
   }
 
   // --- Tasks --------------------------------------------------------------
