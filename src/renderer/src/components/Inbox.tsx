@@ -3,6 +3,17 @@ import type { Account, EmailItem, FolderMeta, InboxResult, Task, Workspace } fro
 import { MessageReader } from './MessageReader'
 import { Compose } from './Compose'
 
+interface RailFolder {
+  type: 'folder'
+  name: string
+}
+interface RailGroup {
+  type: 'group'
+  name: string
+  children: { name: string; leaf: string }[]
+}
+type RailEntry = RailFolder | RailGroup
+
 interface Props {
   accounts: Account[]
   workspaces: Workspace[]
@@ -104,6 +115,42 @@ export function Inbox({
     folderMeta.forEach((f) => map.set(f.name, f.color))
     return map
   }, [folderMeta])
+
+  // Group nested labels ("Inbox/ACT", "Inbox/AFP", …) under a collapsible parent
+  // so the rail stays readable with dozens of folders.
+  const railEntries = useMemo<RailEntry[]>(() => {
+    const standalone: RailEntry[] = []
+    const groups = new Map<string, RailGroup>()
+    for (const name of folders) {
+      const slash = name.indexOf('/')
+      if (slash === -1) {
+        standalone.push({ type: 'folder', name })
+      } else {
+        const top = name.slice(0, slash)
+        let g = groups.get(top)
+        if (!g) {
+          g = { type: 'group', name: top, children: [] }
+          groups.set(top, g)
+        }
+        g.children.push({ name, leaf: name.slice(slash + 1) })
+      }
+    }
+    groups.forEach((g) => g.children.sort((a, b) => a.leaf.localeCompare(b.leaf)))
+    return [...standalone, ...groups.values()].sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+    )
+  }, [folders])
+
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+  // The parent group of the active folder is always shown expanded.
+  const activeGroup = !inInbox && folder.includes('/') ? folder.slice(0, folder.indexOf('/')) : null
+  const isGroupOpen = (g: string): boolean => expandedGroups.has(g) || g === activeGroup
+  const toggleGroup = (g: string): void =>
+    setExpandedGroups((prev) => {
+      const next = new Set(prev)
+      next.has(g) ? next.delete(g) : next.add(g)
+      return next
+    })
 
   useEffect(() => {
     if (!toast) return
@@ -263,17 +310,45 @@ export function Inbox({
             <span className="folder-row-icon">📥</span>
             <span className="folder-row-name">Inbox</span>
           </button>
-          {folders.map((f) => (
-            <button
-              key={f}
-              className={`folder-row ${folder === f ? 'active' : ''}`}
-              onClick={() => selectFolder(f)}
-              title={f}
-            >
-              <span className="folder-dot" style={{ background: folderColor.get(f) ?? '#64748b' }} />
-              <span className="folder-row-name">{f}</span>
-            </button>
-          ))}
+          {railEntries.map((e) =>
+            e.type === 'folder' ? (
+              <button
+                key={e.name}
+                className={`folder-row ${folder === e.name ? 'active' : ''}`}
+                onClick={() => selectFolder(e.name)}
+                title={e.name}
+              >
+                <span
+                  className="folder-dot"
+                  style={{ background: folderColor.get(e.name) ?? '#64748b' }}
+                />
+                <span className="folder-row-name">{e.name}</span>
+              </button>
+            ) : (
+              <div key={e.name} className="folder-group">
+                <button className="folder-row folder-group-head" onClick={() => toggleGroup(e.name)}>
+                  <span className="folder-caret">{isGroupOpen(e.name) ? '▾' : '▸'}</span>
+                  <span className="folder-row-name">{e.name}</span>
+                  <span className="folder-group-count">{e.children.length}</span>
+                </button>
+                {isGroupOpen(e.name) &&
+                  e.children.map((c) => (
+                    <button
+                      key={c.name}
+                      className={`folder-row folder-child ${folder === c.name ? 'active' : ''}`}
+                      onClick={() => selectFolder(c.name)}
+                      title={c.name}
+                    >
+                      <span
+                        className="folder-dot"
+                        style={{ background: folderColor.get(c.name) ?? '#64748b' }}
+                      />
+                      <span className="folder-row-name">{c.leaf}</span>
+                    </button>
+                  ))}
+              </div>
+            )
+          )}
         </div>
       </aside>
 

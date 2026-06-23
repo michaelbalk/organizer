@@ -1037,6 +1037,27 @@ button {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.folder-group-head {
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.folder-caret {
+  flex: none;
+  width: 12px;
+  font-size: 10px;
+  color: var(--muted);
+}
+.folder-group-count {
+  flex: none;
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--panel);
+  border-radius: 10px;
+  padding: 0 6px;
+}
+.folder-child {
+  padding-left: 24px;
+}
 .inbox-list-col {
   display: flex;
   flex-direction: column;

@@ -128,7 +128,7 @@ export function Sidebar({
       )}
 
       <div className="sidebar-footer">
-        <span className="muted">Phase 1 · Local data</span>
+        <span className="muted">Organizer · Local data</span>
       </div>
     </aside>
   )
