@@ -29,7 +29,7 @@ export function BriefModal({ event, onClose, onAttached, onToast, onGoToSettings
         accountEmail: event.accountEmail,
         title: event.title,
         when: whenLabel(event),
-        attendees: event.attendees.join(', ') || undefined,
+        attendees: (event.attendees ?? []).join(', ') || undefined,
         location: event.location || undefined,
         description: event.description || undefined,
         guidance: guidance.trim() || undefined
