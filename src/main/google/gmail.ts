@@ -374,6 +374,99 @@ export async function listLabels(accountId: string): Promise<GmailLabel[]> {
     .sort((a, b) => a.name.localeCompare(b.name))
 }
 
+// --- Folders (Gmail labels) -----------------------------------------------
+
+function connectedGoogleAccounts(): { id: string; email: string; workspaceId: string }[] {
+  return getStore()
+    .getData()
+    .accounts.filter((a) => a.provider === 'google' && a.connected)
+}
+
+/** Distinct user-label ("folder") names across every connected account. */
+export async function listFolders(): Promise<string[]> {
+  const names = new Set<string>()
+  await Promise.all(
+    connectedGoogleAccounts().map(async (acc) => {
+      try {
+        for (const l of await listLabels(acc.id)) names.add(l.name)
+      } catch {
+        /* skip an account we can't reach right now */
+      }
+    })
+  )
+  return [...names].sort((a, b) => a.localeCompare(b))
+}
+
+/** Creates a folder (label) of this name in every account that lacks it. */
+export async function createFolder(name: string): Promise<void> {
+  const trimmed = name.trim()
+  if (!trimmed) throw new Error('Folder name cannot be empty.')
+
+  const accounts = connectedGoogleAccounts()
+  if (accounts.length === 0) throw new Error('Connect a Google account first.')
+
+  await Promise.all(
+    accounts.map(async (acc) => {
+      const existing = await listLabels(acc.id)
+      if (existing.some((l) => l.name.toLowerCase() === trimmed.toLowerCase())) return
+      const client = getAuthorizedClient(acc.id)
+      await client.request({
+        url: `${GMAIL_BASE}/labels`,
+        method: 'POST',
+        data: { name: trimmed, labelListVisibility: 'labelShow', messageListVisibility: 'show' }
+      })
+    })
+  )
+}
+
+/** Deletes the folder (label) of this name from every account that has it. */
+export async function deleteFolder(name: string): Promise<void> {
+  await Promise.all(
+    connectedGoogleAccounts().map(async (acc) => {
+      const match = (await listLabels(acc.id)).find((l) => l.name === name)
+      if (!match) return
+      const client = getAuthorizedClient(acc.id)
+      await client.request({ url: `${GMAIL_BASE}/labels/${match.id}`, method: 'DELETE' })
+    })
+  )
+}
+
+/** Lists messages filed under a folder (label) across all connected accounts. */
+export async function listFolderMessages(name: string, maxPerAccount = 30): Promise<InboxResult> {
+  const emails: EmailItem[] = []
+  const errors: InboxError[] = []
+
+  await Promise.all(
+    connectedGoogleAccounts().map(async (acc) => {
+      try {
+        const match = (await listLabels(acc.id)).find((l) => l.name === name)
+        if (!match) return
+        const client = getAuthorizedClient(acc.id)
+        const list = await client.request<{ messages?: GmailMessageRef[] }>({
+          url: `${GMAIL_BASE}/messages?labelIds=${encodeURIComponent(match.id)}&maxResults=${maxPerAccount}`
+        })
+        const messages = await Promise.all(
+          (list.data.messages ?? []).map((ref) =>
+            client
+              .request<GmailMessage>({
+                url:
+                  `${GMAIL_BASE}/messages/${ref.id}` +
+                  `?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`
+              })
+              .then((r) => r.data)
+          )
+        )
+        emails.push(...messages.map((m) => normalize(m, acc.id, acc.email, acc.workspaceId)))
+      } catch (err) {
+        errors.push(toInboxError(acc.id, acc.email, err))
+      }
+    })
+  )
+
+  emails.sort((a, b) => b.date.localeCompare(a.date))
+  return { emails, errors, fetchedAt: new Date().toISOString() }
+}
+
 /** Sends a reply/forward/new message via Gmail, threading replies correctly. */
 export async function sendEmail(input: SendEmailInput): Promise<void> {
   const account = getStore()

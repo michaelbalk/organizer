@@ -66,6 +66,13 @@ const api = {
     ipcRenderer.invoke(IPC.listLabels, accountId),
   sendEmail: (input: SendEmailInput): Promise<void> => ipcRenderer.invoke(IPC.sendEmail, input),
 
+  // Folders (Gmail labels)
+  listFolders: (): Promise<string[]> => ipcRenderer.invoke(IPC.listFolders),
+  createFolder: (name: string): Promise<void> => ipcRenderer.invoke(IPC.createFolder, name),
+  deleteFolder: (name: string): Promise<void> => ipcRenderer.invoke(IPC.deleteFolder, name),
+  listFolderMessages: (name: string, max?: number): Promise<InboxResult> =>
+    ipcRenderer.invoke(IPC.listFolderMessages, name, max),
+
   // Claude assistant
   isAnthropicConfigured: (): Promise<boolean> => ipcRenderer.invoke(IPC.anthropicConfigured),
   draftReply: (input: DraftReplyInput): Promise<string> =>

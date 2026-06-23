@@ -39,24 +39,75 @@ export function Inbox({
   // Whether the "new email" composer is open.
   const [composing, setComposing] = useState(false)
 
+  // Folder view: 'inbox' or a Gmail label name. Plus the available folders.
+  const [folder, setFolder] = useState<string>('inbox')
+  const [folders, setFolders] = useState<string[]>([])
+  // Inline "new folder" input value; null when not creating.
+  const [newFolder, setNewFolder] = useState<string | null>(null)
+
   // Focus-triage snapshot: a frozen queue we step through one item at a time.
   const [triage, setTriage] = useState<{ queue: EmailItem[]; index: number } | null>(null)
 
   const connected = accounts.filter((a) => a.provider === 'google' && a.connected)
+  const inInbox = folder === 'inbox'
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      setResult(await window.api.listInbox())
+      setResult(folder === 'inbox' ? await window.api.listInbox() : await window.api.listFolderMessages(folder))
     } finally {
       setLoading(false)
+    }
+  }, [folder])
+
+  const loadFolders = useCallback(async () => {
+    try {
+      setFolders(await window.api.listFolders())
+    } catch {
+      /* leave folders as-is */
     }
   }, [])
 
   useEffect(() => {
-    if (connected.length > 0) load()
-    else setLoading(false)
-  }, [connected.length, load])
+    if (connected.length > 0) {
+      load()
+      loadFolders()
+    } else setLoading(false)
+  }, [connected.length, load, loadFolders])
+
+  const selectFolder = useCallback((f: string) => {
+    setFolder(f)
+    setReading(null)
+  }, [])
+
+  const createFolderNow = useCallback(async () => {
+    const name = (newFolder ?? '').trim()
+    setNewFolder(null)
+    if (!name) return
+    try {
+      await window.api.createFolder(name)
+      await loadFolders()
+      selectFolder(name)
+      setToast(`Folder “${name}” created`)
+    } catch (e) {
+      setToast(e instanceof Error ? e.message : 'Could not create folder')
+    }
+  }, [newFolder, loadFolders, selectFolder])
+
+  const deleteFolderNow = useCallback(
+    async (name: string) => {
+      if (!window.confirm(`Delete the folder “${name}”?\n\nEmails are kept — they just lose this label.`)) return
+      try {
+        await window.api.deleteFolder(name)
+        await loadFolders()
+        selectFolder('inbox')
+        setToast(`Folder “${name}” deleted`)
+      } catch (e) {
+        setToast(e instanceof Error ? e.message : 'Could not delete folder')
+      }
+    },
+    [loadFolders, selectFolder]
+  )
 
   useEffect(() => {
     if (!toast) return
@@ -82,6 +133,8 @@ export function Inbox({
   const emails = result?.emails ?? []
   const pile = useMemo(() => emails.filter((e) => !isHandled(e)), [emails, isHandled])
   const handledCount = emails.length - pile.length
+  // In the Inbox we show the un-handled pile; in a folder we show everything.
+  const items = inInbox ? pile : emails
 
   // --- Actions ------------------------------------------------------------
 
@@ -211,13 +264,55 @@ export function Inbox({
           </div>
         ))}
 
+        <div className="folder-bar">
+          <button
+            className={`folder-chip ${inInbox ? 'active' : ''}`}
+            onClick={() => selectFolder('inbox')}
+          >
+            📥 Inbox
+          </button>
+          {folders.map((f) => (
+            <button
+              key={f}
+              className={`folder-chip ${folder === f ? 'active' : ''}`}
+              onClick={() => selectFolder(f)}
+              title={f}
+            >
+              🏷 {f}
+            </button>
+          ))}
+          {newFolder === null ? (
+            <button className="folder-chip add" onClick={() => setNewFolder('')} title="New folder">
+              ＋
+            </button>
+          ) : (
+            <span className="folder-new">
+              <input
+                autoFocus
+                value={newFolder}
+                placeholder="Folder name"
+                onChange={(e) => setNewFolder(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') void createFolderNow()
+                  else if (e.key === 'Escape') setNewFolder(null)
+                }}
+                onBlur={() => void createFolderNow()}
+              />
+            </span>
+          )}
+        </div>
+
         <div className="inbox-head">
           <div>
             <div className="inbox-count">
-              {pile.length === 0 ? 'All clear' : `${pile.length} to triage`}
+              {inInbox
+                ? pile.length === 0
+                  ? 'All clear'
+                  : `${pile.length} to triage`
+                : `${emails.length} in ${folder}`}
             </div>
             <div className="muted inbox-sub">
-              {handledCount > 0 && `${handledCount} handled · `}
+              {inInbox && handledCount > 0 && `${handledCount} handled · `}
               across {connected.length} account{connected.length === 1 ? '' : 's'}
             </div>
           </div>
@@ -225,24 +320,34 @@ export function Inbox({
             <button className="btn btn-ghost btn-sm" onClick={load} disabled={loading}>
               {loading ? '…' : '↻'}
             </button>
-            <button className="btn btn-ghost btn-sm" onClick={startTriage} disabled={pile.length === 0}>
-              ⚡ Triage
-            </button>
+            {inInbox ? (
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={startTriage}
+                disabled={pile.length === 0}
+              >
+                ⚡ Triage
+              </button>
+            ) : (
+              <button className="btn btn-ghost btn-sm" onClick={() => deleteFolderNow(folder)}>
+                🗑 Delete
+              </button>
+            )}
             <button className="btn btn-primary btn-sm" onClick={() => setComposing(true)}>
               ✏️ Compose
             </button>
           </div>
         </div>
 
-        {pile.length === 0 ? (
+        {items.length === 0 ? (
           <div className="celebrate">
-            <div className="celebrate-emoji">🎉</div>
-            <h3>Inbox triaged</h3>
-            <p>Nothing left to process.</p>
+            <div className="celebrate-emoji">{inInbox ? '🎉' : '📂'}</div>
+            <h3>{inInbox ? 'Inbox triaged' : 'Empty folder'}</h3>
+            <p>{inInbox ? 'Nothing left to process.' : `Nothing filed under ${folder} yet.`}</p>
           </div>
         ) : (
           <ul className="email-list">
-            {pile.map((e) => (
+            {items.map((e) => (
               <EmailRow
                 key={e.id}
                 email={e}
@@ -257,7 +362,7 @@ export function Inbox({
           </ul>
         )}
 
-        {handledCount > 0 && (
+        {inInbox && handledCount > 0 && (
           <div className="handled-section">
             <button className="link-btn" onClick={() => setShowHandled((v) => !v)}>
               {showHandled ? 'Hide' : 'Show'} {handledCount} handled

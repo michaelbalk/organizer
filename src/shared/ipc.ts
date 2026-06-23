@@ -27,6 +27,11 @@ export const IPC = {
   fileMessage: 'mail:file',
   listLabels: 'mail:labels',
   sendEmail: 'mail:send',
+  // Folders (Gmail labels)
+  listFolders: 'folder:list',
+  createFolder: 'folder:create',
+  deleteFolder: 'folder:delete',
+  listFolderMessages: 'folder:messages',
   // Claude assistant
   anthropicConfigured: 'claude:configured',
   draftReply: 'claude:draft'

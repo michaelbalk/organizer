@@ -15,7 +15,11 @@ import {
   applyMailAction,
   fileMessage,
   listLabels,
-  sendEmail
+  sendEmail,
+  listFolders,
+  createFolder,
+  deleteFolder,
+  listFolderMessages
 } from './google/gmail'
 import type {
   Account,
@@ -86,6 +90,14 @@ export function registerIpc(): void {
   )
   ipcMain.handle(IPC.listLabels, (_e, accountId: string) => listLabels(accountId))
   ipcMain.handle(IPC.sendEmail, (_e, input: SendEmailInput) => sendEmail(input))
+
+  // Folders (Gmail labels)
+  ipcMain.handle(IPC.listFolders, () => listFolders())
+  ipcMain.handle(IPC.createFolder, (_e, name: string) => createFolder(name))
+  ipcMain.handle(IPC.deleteFolder, (_e, name: string) => deleteFolder(name))
+  ipcMain.handle(IPC.listFolderMessages, (_e, name: string, max?: number) =>
+    listFolderMessages(name, max)
+  )
 
   // Claude assistant
   ipcMain.handle(IPC.anthropicConfigured, () => isAnthropicConfigured())

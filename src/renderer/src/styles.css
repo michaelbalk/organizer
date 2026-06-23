@@ -990,6 +990,53 @@ button {
   line-height: 1.5;
 }
 
+/* ---------- Folder bar ---------- */
+.folder-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.folder-chip {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.folder-chip:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.folder-chip.active {
+  background: var(--panel-2);
+  border-color: var(--accent);
+  color: var(--text);
+  font-weight: 600;
+}
+.folder-chip.add {
+  color: var(--muted);
+  padding: 4px 11px;
+  font-weight: 700;
+}
+.folder-new input {
+  background: var(--bg-2);
+  border: 1px solid var(--accent);
+  color: var(--text);
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  width: 140px;
+  outline: none;
+  font-family: inherit;
+}
+
 .email-row.compact {
   cursor: pointer;
 }
