@@ -78,7 +78,7 @@ export function NewMeeting({ accounts, onClose, onCreated, onToast }: Props): JS
             <p className="muted">✓ Meeting scheduled and invites sent.</p>
             {created.meetLink ? (
               <div className="field">
-                <span>Google Meet link</span>
+                <span>Join link</span>
                 <div className="task-source">
                   <span className="task-source-label">{created.meetLink}</span>
                   <div style={{ display: 'flex', gap: 6 }}>
@@ -152,10 +152,8 @@ export function NewMeeting({ accounts, onClose, onCreated, onToast }: Props): JS
                   onChange={(e) => setPlatform(e.target.value as MeetingPlatform)}
                 >
                   <option value="meet">Google Meet</option>
+                  <option value="zoom">Zoom</option>
                   <option value="none">No video link</option>
-                  <option value="zoom" disabled>
-                    Zoom (connect in Settings — soon)
-                  </option>
                   <option value="teams" disabled>
                     Microsoft Teams (soon)
                   </option>

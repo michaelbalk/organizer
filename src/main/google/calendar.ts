@@ -8,6 +8,7 @@ import type {
 } from '@shared/types'
 import { getStore } from '../store'
 import { getAuthorizedClient } from './accounts'
+import { createZoomMeeting } from '../zoom'
 
 const CAL_BASE = 'https://www.googleapis.com/calendar/v3'
 
@@ -159,9 +160,32 @@ interface CreatedEventResponse {
 export async function createEvent(input: CreateEventInput): Promise<CreatedEvent> {
   const client = getAuthorizedClient(input.accountId)
 
+  const durationMinutes = Math.max(
+    1,
+    Math.round((new Date(input.end).getTime() - new Date(input.start).getTime()) / 60000)
+  )
+
+  // For Zoom, create the meeting first and carry its join link onto the event.
+  let zoomUrl: string | null = null
+  if (input.platform === 'zoom') {
+    const meeting = await createZoomMeeting({
+      topic: input.title,
+      start: input.start,
+      timeZone: input.timeZone,
+      durationMinutes,
+      agenda: input.description
+    })
+    zoomUrl = meeting.joinUrl
+  }
+
+  const description = zoomUrl
+    ? `${input.description ? input.description + '\n\n' : ''}Zoom: ${zoomUrl}`
+    : input.description || undefined
+
   const body: Record<string, unknown> = {
     summary: input.title,
-    description: input.description || undefined,
+    description,
+    location: zoomUrl ?? undefined,
     start: { dateTime: input.start, timeZone: input.timeZone },
     end: { dateTime: input.end, timeZone: input.timeZone },
     attendees: (input.attendees ?? []).map((email) => ({ email }))
@@ -185,6 +209,7 @@ export async function createEvent(input: CreateEventInput): Promise<CreatedEvent
   })
   const ev = res.data
   const meetLink =
+    zoomUrl ??
     ev.hangoutLink ??
     ev.conferenceData?.entryPoints?.find((e) => e.entryPointType === 'video')?.uri ??
     null

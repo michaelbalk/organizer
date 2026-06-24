@@ -60,3 +60,22 @@ export function getAnthropicConfig(): AnthropicConfig | null {
 export function isAnthropicConfigured(): boolean {
   return getAnthropicConfig() !== null
 }
+
+export interface ZoomConfig {
+  accountId: string
+  clientId: string
+  clientSecret: string
+}
+
+/** Zoom Server-to-Server OAuth credentials, or null if not configured. */
+export function getZoomConfig(): ZoomConfig | null {
+  const accountId = process.env.ZOOM_ACCOUNT_ID?.trim()
+  const clientId = process.env.ZOOM_CLIENT_ID?.trim()
+  const clientSecret = process.env.ZOOM_CLIENT_SECRET?.trim()
+  if (!accountId || !clientId || !clientSecret) return null
+  return { accountId, clientId, clientSecret }
+}
+
+export function isZoomConfigured(): boolean {
+  return getZoomConfig() !== null
+}
