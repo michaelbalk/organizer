@@ -1,13 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import {
-  WORKSPACE_KINDS,
-  kindColor,
-  type Account,
-  type CalendarEvent,
-  type CalendarResult,
-  type Task,
-  type Workspace
-} from '@shared/types'
+import type { Account, CalendarEvent, CalendarResult, Task, Workspace } from '@shared/types'
 import { BriefModal } from './BriefModal'
 
 interface Props {
@@ -65,11 +57,13 @@ export function Calendar({
     return () => clearTimeout(t)
   }, [toast])
 
-  // Color calendar entries by category (personal / business / school).
+  // Color calendar entries by each workspace's own color.
   const colorOf = useCallback(
-    (workspaceId: string) => kindColor(workspaceById.get(workspaceId)?.kind),
+    (workspaceId: string) => workspaceById.get(workspaceId)?.color ?? '#64748b',
     [workspaceById]
   )
+
+  const legendWorkspaces = useMemo(() => [...workspaceById.values()], [workspaceById])
 
   // Group events + scheduled tasks into the next 8 days.
   const days = useMemo(() => {
@@ -169,10 +163,10 @@ export function Calendar({
       </div>
 
       <div className="cal-legend">
-        {WORKSPACE_KINDS.map((k) => (
-          <span key={k.id} className="cal-legend-item">
-            <span className="cal-legend-dot" style={{ background: k.color }} />
-            {k.label}
+        {legendWorkspaces.map((w) => (
+          <span key={w.id} className="cal-legend-item">
+            <span className="cal-legend-dot" style={{ background: w.color }} />
+            {w.name}
           </span>
         ))}
       </div>
