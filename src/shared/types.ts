@@ -291,13 +291,30 @@ export interface DraftReplyInput {
 
 // --- Contacts / CRM -------------------------------------------------------
 
-export type ContactStage = 'lead' | 'active' | 'customer' | 'archived'
+/** A contact's relationship type (the field was formerly a sales "stage"). */
+export type ContactStage =
+  | 'colleague'
+  | 'client'
+  | 'lead'
+  | 'vendor'
+  | 'advisor'
+  | 'consultant'
+  | 'partner'
+  | 'investor'
+  | 'friend'
+  | 'other'
 
 export const CONTACT_STAGES: { id: ContactStage; label: string; color: string }[] = [
+  { id: 'colleague', label: 'Colleague', color: '#2563eb' },
+  { id: 'client', label: 'Client', color: '#16a34a' },
   { id: 'lead', label: 'Lead', color: '#d97706' },
-  { id: 'active', label: 'Active', color: '#2563eb' },
-  { id: 'customer', label: 'Customer', color: '#16a34a' },
-  { id: 'archived', label: 'Archived', color: '#6b7280' }
+  { id: 'vendor', label: 'Vendor', color: '#9333ea' },
+  { id: 'advisor', label: 'Advisor', color: '#0891b2' },
+  { id: 'consultant', label: 'Consultant', color: '#0ea5e9' },
+  { id: 'partner', label: 'Partner', color: '#db2777' },
+  { id: 'investor', label: 'Investor', color: '#6366f1' },
+  { id: 'friend', label: 'Friend', color: '#f43f5e' },
+  { id: 'other', label: 'Other', color: '#6b7280' }
 ]
 
 export type InteractionKind = 'note' | 'call' | 'email' | 'meeting'
@@ -333,6 +350,8 @@ export interface Contact {
   lastContactedAt: string | null
   /** Optional follow-up date (YYYY-MM-DD); surfaced when due/overdue. */
   followUpAt: string | null
+  /** Id of the task created to track the follow-up (kept in sync with followUpAt). */
+  followUpTaskId: string | null
   /** Latest Claude-generated briefing attached to this contact. */
   briefing: ContactBriefing | null
   createdAt: string

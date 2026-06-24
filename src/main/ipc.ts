@@ -155,4 +155,7 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.setContactBriefing, (_e, id: string, text: string) =>
     store.setContactBriefing(id, text)
   )
+  ipcMain.handle(IPC.setContactFollowUp, (_e, contactId: string, date: string | null) =>
+    store.setFollowUp(contactId, date)
+  )
 }

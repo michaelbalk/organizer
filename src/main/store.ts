@@ -2,6 +2,7 @@ import { app } from 'electron'
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from 'fs'
 import { join } from 'path'
 import { randomUUID } from 'crypto'
+import { CONTACT_STAGES } from '@shared/types'
 import type {
   Account,
   AppData,
@@ -75,10 +76,19 @@ class Store {
     data.dismissedEmails ??= []
     data.folders ??= []
     data.contacts ??= []
+    // Map the old sales "stage" values onto the new relationship set.
+    const stageMap: Record<string, Contact['stage']> = {
+      active: 'client',
+      customer: 'client',
+      archived: 'other'
+    }
+    const validStages = new Set(CONTACT_STAGES.map((s) => s.id))
     data.contacts = data.contacts.map((c) => ({
       ...c,
       followUpAt: c.followUpAt ?? null,
-      briefing: c.briefing ?? null
+      followUpTaskId: c.followUpTaskId ?? null,
+      briefing: c.briefing ?? null,
+      stage: stageMap[c.stage] ?? (validStages.has(c.stage) ? c.stage : 'other')
     }))
     return data
   }
@@ -397,12 +407,13 @@ class Store {
       company: input.company ?? '',
       title: input.title ?? '',
       workspaceId: input.workspaceId ?? this.data.workspaces[0]?.id ?? '',
-      stage: input.stage ?? 'lead',
+      stage: input.stage ?? 'other',
       tags: input.tags ?? [],
       notes: input.notes ?? '',
       interactions: [],
       lastContactedAt: null,
       followUpAt: null,
+      followUpTaskId: null,
       briefing: null,
       createdAt: now,
       updatedAt: now
@@ -458,7 +469,7 @@ class Store {
         name: input.name || input.email || 'Unknown',
         email: input.email,
         workspaceId: input.workspaceId,
-        stage: 'lead'
+        stage: 'other'
       })
       created = true
     }
@@ -471,6 +482,48 @@ class Store {
     const contact = this.data.contacts.find((c) => c.id === id)
     if (!contact) return null
     contact.briefing = { text: text.trim(), generatedAt: new Date().toISOString() }
+    contact.updatedAt = new Date().toISOString()
+    this.persist()
+    return contact
+  }
+
+  /**
+   * Sets (or clears) a contact's follow-up date and keeps a linked task in sync —
+   * so a follow-up shows on the board and, via its due date, on the calendar.
+   */
+  setFollowUp(contactId: string, date: string | null): Contact | null {
+    const contact = this.data.contacts.find((c) => c.id === contactId)
+    if (!contact) return null
+
+    if (date) {
+      const existing = contact.followUpTaskId
+        ? this.data.tasks.find((t) => t.id === contact.followUpTaskId)
+        : undefined
+      if (existing) {
+        existing.dueDate = date
+        if (existing.status === 'done') {
+          existing.status = 'todo'
+          existing.completedAt = null
+        }
+        existing.updatedAt = new Date().toISOString()
+      } else {
+        const task = this.createTask({
+          title: `Follow up: ${contact.name}`,
+          notes: `Follow-up with ${contact.name}${contact.company ? ` (${contact.company})` : ''}.`,
+          workspaceId: contact.workspaceId,
+          status: 'todo',
+          priority: 'medium',
+          dueDate: date
+        })
+        contact.followUpTaskId = task.id
+      }
+      contact.followUpAt = date
+    } else {
+      if (contact.followUpTaskId) this.deleteTask(contact.followUpTaskId)
+      contact.followUpAt = null
+      contact.followUpTaskId = null
+    }
+
     contact.updatedAt = new Date().toISOString()
     this.persist()
     return contact

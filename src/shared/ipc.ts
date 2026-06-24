@@ -49,6 +49,7 @@ export const IPC = {
   deleteContact: 'contact:delete',
   addInteraction: 'contact:interaction',
   captureContact: 'contact:capture',
+  setContactFollowUp: 'contact:followup',
   draftContactBrief: 'contact:brief',
   setContactBriefing: 'contact:setBrief',
   attachEventBrief: 'calendar:attachBrief'

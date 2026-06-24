@@ -31,8 +31,7 @@ export function Contacts({ contacts, workspaces, workspaceById, onChanged }: Pro
   }, [toast])
 
   const today = todayKey()
-  const isOverdue = (c: Contact): boolean =>
-    !!c.followUpAt && c.followUpAt <= today && c.stage !== 'archived'
+  const isOverdue = (c: Contact): boolean => !!c.followUpAt && c.followUpAt <= today
   const overdueCount = contacts.filter(isOverdue).length
 
   const filtered = useMemo(() => {
@@ -91,7 +90,9 @@ export function Contacts({ contacts, workspaces, workspaceById, onChanged }: Pro
           <ul className="crm-list">
             {filtered.map((c) => {
               const ws = workspaceById.get(c.workspaceId)
-              const stage = CONTACT_STAGES.find((s) => s.id === c.stage)!
+              const stage =
+                CONTACT_STAGES.find((s) => s.id === c.stage) ??
+                CONTACT_STAGES[CONTACT_STAGES.length - 1]
               return (
                 <li
                   key={c.id}
@@ -172,6 +173,14 @@ function ContactDetail({
     await onChanged()
   }
 
+  // Follow-up date drives a synced task (which then appears on the calendar).
+  const saveFollowUp = async (value: string): Promise<void> => {
+    setFollowUp(value)
+    await window.api.setContactFollowUp(contact.id, value || null)
+    await onChanged()
+    onToast(value ? 'Follow-up task added to your board & calendar ✓' : 'Follow-up cleared')
+  }
+
   const addLog = async (): Promise<void> => {
     if (!logNote.trim()) return
     await window.api.addInteraction(contact.id, { kind: logKind, note: logNote.trim() })
@@ -240,7 +249,7 @@ function ContactDetail({
             </select>
           </label>
           <label className="field">
-            <span>Stage</span>
+            <span>Relationship</span>
             <select
               value={contact.stage}
               onChange={(e) => save({ stage: e.target.value as ContactStage })}
@@ -257,14 +266,7 @@ function ContactDetail({
         <div className="field-row">
           <label className="field">
             <span>Follow-up date</span>
-            <input
-              type="date"
-              value={followUp}
-              onChange={(e) => {
-                setFollowUp(e.target.value)
-                save({ followUpAt: e.target.value || null })
-              }}
-            />
+            <input type="date" value={followUp} onChange={(e) => saveFollowUp(e.target.value)} />
           </label>
           <span />
         </div>

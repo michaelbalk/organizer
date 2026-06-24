@@ -126,7 +126,9 @@ const api = {
   draftContactBrief: (input: ContactBriefInput): Promise<string> =>
     ipcRenderer.invoke(IPC.draftContactBrief, input),
   setContactBriefing: (id: string, text: string): Promise<Contact | null> =>
-    ipcRenderer.invoke(IPC.setContactBriefing, id, text)
+    ipcRenderer.invoke(IPC.setContactBriefing, id, text),
+  setContactFollowUp: (contactId: string, date: string | null): Promise<Contact | null> =>
+    ipcRenderer.invoke(IPC.setContactFollowUp, contactId, date)
 }
 
 export type OrganizerApi = typeof api

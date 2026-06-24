@@ -119,7 +119,7 @@ export async function draftContactBrief(input: ContactBriefInput): Promise<strin
     input.title ? `Title: ${input.title}` : '',
     input.company ? `Company: ${input.company}` : '',
     input.email ? `Email: ${input.email}` : '',
-    input.stage ? `Pipeline stage: ${input.stage}` : '',
+    input.stage ? `Relationship: ${input.stage}` : '',
     input.tags?.length ? `Tags: ${input.tags.join(', ')}` : '',
     input.notes ? `Notes: ${input.notes}` : ''
   ].filter(Boolean)
