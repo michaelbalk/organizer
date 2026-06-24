@@ -154,9 +154,6 @@ export function NewMeeting({ accounts, onClose, onCreated, onToast }: Props): JS
                   <option value="meet">Google Meet</option>
                   <option value="zoom">Zoom</option>
                   <option value="none">No video link</option>
-                  <option value="teams" disabled>
-                    Microsoft Teams (soon)
-                  </option>
                 </select>
               </label>
             </div>
