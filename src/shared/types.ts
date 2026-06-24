@@ -289,6 +289,70 @@ export interface DraftReplyInput {
   guidance?: string
 }
 
+// --- Contacts / CRM -------------------------------------------------------
+
+export type ContactStage = 'lead' | 'active' | 'customer' | 'archived'
+
+export const CONTACT_STAGES: { id: ContactStage; label: string; color: string }[] = [
+  { id: 'lead', label: 'Lead', color: '#d97706' },
+  { id: 'active', label: 'Active', color: '#2563eb' },
+  { id: 'customer', label: 'Customer', color: '#16a34a' },
+  { id: 'archived', label: 'Archived', color: '#6b7280' }
+]
+
+export type InteractionKind = 'note' | 'call' | 'email' | 'meeting'
+
+export interface ContactInteraction {
+  id: string
+  /** ISO datetime the interaction was logged. */
+  at: string
+  kind: InteractionKind
+  note: string
+}
+
+export interface Contact {
+  id: string
+  name: string
+  email: string
+  phone: string
+  company: string
+  title: string
+  /** Which workspace/sphere (Personal, a company, School…) this contact belongs to. */
+  workspaceId: string
+  stage: ContactStage
+  tags: string[]
+  notes: string
+  interactions: ContactInteraction[]
+  /** ISO of the most recent logged interaction (for follow-up sorting). */
+  lastContactedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface NewContactInput {
+  name: string
+  email?: string
+  phone?: string
+  company?: string
+  title?: string
+  workspaceId?: string
+  stage?: ContactStage
+  tags?: string[]
+  notes?: string
+}
+
+export type ContactPatch = Partial<
+  Pick<
+    Contact,
+    'name' | 'email' | 'phone' | 'company' | 'title' | 'workspaceId' | 'stage' | 'tags' | 'notes'
+  >
+>
+
+export interface NewInteractionInput {
+  kind: InteractionKind
+  note: string
+}
+
 /** Full persisted application state. */
 export interface AppData {
   version: number
@@ -299,6 +363,8 @@ export interface AppData {
   dismissedEmails: string[]
   /** Local color/note metadata for folders (Gmail labels), keyed by name. */
   folders: FolderMeta[]
+  /** Address book / CRM contacts. */
+  contacts: Contact[]
 }
 
 /** Payload shapes for creating/updating tasks from the renderer. */

@@ -9,8 +9,9 @@ import { Inbox } from './components/Inbox'
 import { Calendar } from './components/Calendar'
 import { Today } from './components/Today'
 import { Folders } from './components/Folders'
+import { Contacts } from './components/Contacts'
 
-export type View = 'today' | 'board' | 'email' | 'folders' | 'calendar' | 'settings'
+export type View = 'today' | 'board' | 'email' | 'folders' | 'calendar' | 'contacts' | 'settings'
 
 /** Sidebar selection: all tasks, a kind group, or a single workspace. */
 export type Selection =
@@ -24,7 +25,8 @@ const EMPTY: AppData = {
   accounts: [],
   tasks: [],
   dismissedEmails: [],
-  folders: []
+  folders: [],
+  contacts: []
 }
 
 export default function App(): JSX.Element {
@@ -83,6 +85,7 @@ export default function App(): JSX.Element {
     if (view === 'email') return 'Inbox'
     if (view === 'folders') return 'Folders'
     if (view === 'calendar') return 'Calendar'
+    if (view === 'contacts') return 'Contacts'
     if (view === 'settings') return 'Settings'
     if (selection.type === 'all') return 'All Tasks'
     if (selection.type === 'kind')
@@ -201,6 +204,14 @@ export default function App(): JSX.Element {
               onEditTask={(task) => setTaskModal({ open: true, task })}
               onChanged={refresh}
               onGoToSettings={() => setView('settings')}
+            />
+          )}
+          {view === 'contacts' && (
+            <Contacts
+              contacts={data.contacts}
+              workspaces={data.workspaces}
+              workspaceById={workspaceById}
+              onChanged={refresh}
             />
           )}
           {view === 'settings' && (

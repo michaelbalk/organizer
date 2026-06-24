@@ -25,10 +25,13 @@ import {
 import { listCalendarEvents, attachEventBrief, createEvent } from './google/calendar'
 import type {
   Account,
+  ContactPatch,
   CreateEventInput,
   DraftReplyInput,
   MailActionKind,
   MeetingBriefInput,
+  NewContactInput,
+  NewInteractionInput,
   NewTaskInput,
   NewWorkspaceInput,
   SendEmailInput,
@@ -132,5 +135,15 @@ export function registerIpc(): void {
     IPC.attachEventBrief,
     (_e, accountId: string, calendarId: string, eventId: string, brief: string) =>
       attachEventBrief(accountId, calendarId, eventId, brief)
+  )
+
+  // Contacts / CRM
+  ipcMain.handle(IPC.createContact, (_e, input: NewContactInput) => store.createContact(input))
+  ipcMain.handle(IPC.updateContact, (_e, id: string, patch: ContactPatch) =>
+    store.updateContact(id, patch)
+  )
+  ipcMain.handle(IPC.deleteContact, (_e, id: string) => store.deleteContact(id))
+  ipcMain.handle(IPC.addInteraction, (_e, contactId: string, input: NewInteractionInput) =>
+    store.addInteraction(contactId, input)
   )
 }

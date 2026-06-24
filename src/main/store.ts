@@ -5,8 +5,12 @@ import { randomUUID } from 'crypto'
 import type {
   Account,
   AppData,
+  Contact,
+  ContactPatch,
   FolderMeta,
   NewAccountInput,
+  NewContactInput,
+  NewInteractionInput,
   NewTaskInput,
   NewWorkspaceInput,
   Task,
@@ -68,6 +72,7 @@ class Store {
     }))
     data.dismissedEmails ??= []
     data.folders ??= []
+    data.contacts ??= []
     return data
   }
 
@@ -87,7 +92,8 @@ class Store {
       accounts: [],
       tasks: [],
       dismissedEmails: [],
-      folders: []
+      folders: [],
+      contacts: []
     }
     this.data = seeded
     this.persist()
@@ -370,6 +376,64 @@ class Store {
   private nextOrder(status: Task['status']): number {
     const inColumn = this.data.tasks.filter((t) => t.status === status)
     return inColumn.length ? Math.max(...inColumn.map((t) => t.order)) + 1 : 0
+  }
+
+  // --- Contacts / CRM -----------------------------------------------------
+
+  createContact(input: NewContactInput): Contact {
+    const now = new Date().toISOString()
+    const contact: Contact = {
+      id: randomUUID(),
+      name: input.name.trim() || 'Unnamed contact',
+      email: input.email ?? '',
+      phone: input.phone ?? '',
+      company: input.company ?? '',
+      title: input.title ?? '',
+      workspaceId: input.workspaceId ?? this.data.workspaces[0]?.id ?? '',
+      stage: input.stage ?? 'lead',
+      tags: input.tags ?? [],
+      notes: input.notes ?? '',
+      interactions: [],
+      lastContactedAt: null,
+      createdAt: now,
+      updatedAt: now
+    }
+    this.data.contacts.push(contact)
+    this.persist()
+    return contact
+  }
+
+  updateContact(id: string, patch: ContactPatch): Contact | null {
+    const contact = this.data.contacts.find((c) => c.id === id)
+    if (!contact) return null
+    Object.assign(contact, patch, {
+      id: contact.id,
+      createdAt: contact.createdAt,
+      interactions: contact.interactions
+    })
+    contact.updatedAt = new Date().toISOString()
+    this.persist()
+    return contact
+  }
+
+  deleteContact(id: string): boolean {
+    const before = this.data.contacts.length
+    this.data.contacts = this.data.contacts.filter((c) => c.id !== id)
+    const changed = this.data.contacts.length !== before
+    if (changed) this.persist()
+    return changed
+  }
+
+  /** Appends an interaction and bumps the contact's last-contacted timestamp. */
+  addInteraction(contactId: string, input: NewInteractionInput): Contact | null {
+    const contact = this.data.contacts.find((c) => c.id === contactId)
+    if (!contact) return null
+    const at = new Date().toISOString()
+    contact.interactions.push({ id: randomUUID(), at, kind: input.kind, note: input.note.trim() })
+    contact.lastContactedAt = at
+    contact.updatedAt = at
+    this.persist()
+    return contact
   }
 }
 
