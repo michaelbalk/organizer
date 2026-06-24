@@ -190,6 +190,29 @@ export interface CalendarResult {
   fetchedAt: string
 }
 
+/** Which conferencing platform to attach to a new meeting. */
+export type MeetingPlatform = 'meet' | 'zoom' | 'teams' | 'none'
+
+/** Payload to create a calendar event (optionally with a Google Meet link). */
+export interface CreateEventInput {
+  accountId: string
+  title: string
+  /** Local datetime "YYYY-MM-DDTHH:mm:ss" interpreted in timeZone. */
+  start: string
+  end: string
+  timeZone: string
+  attendees?: string[]
+  description?: string
+  platform: MeetingPlatform
+}
+
+export interface CreatedEvent {
+  id: string
+  htmlLink: string
+  /** Video join link, when a conference was attached. */
+  meetLink: string | null
+}
+
 /** A fully-loaded message for the in-app reader. */
 export interface EmailFull {
   id: string

@@ -4,6 +4,8 @@ import type {
   Account,
   AppData,
   CalendarResult,
+  CreatedEvent,
+  CreateEventInput,
   DraftReplyInput,
   MeetingBriefInput,
   EmailFull,
@@ -100,7 +102,9 @@ const api = {
     eventId: string,
     brief: string
   ): Promise<void> =>
-    ipcRenderer.invoke(IPC.attachEventBrief, accountId, calendarId, eventId, brief)
+    ipcRenderer.invoke(IPC.attachEventBrief, accountId, calendarId, eventId, brief),
+  createCalendarEvent: (input: CreateEventInput): Promise<CreatedEvent> =>
+    ipcRenderer.invoke(IPC.createEvent, input)
 }
 
 export type OrganizerApi = typeof api

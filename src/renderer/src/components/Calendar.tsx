@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Account, CalendarEvent, CalendarResult, Task, Workspace } from '@shared/types'
 import { BriefModal } from './BriefModal'
+import { NewMeeting } from './NewMeeting'
 
 interface Props {
   accounts: Account[]
@@ -35,6 +36,7 @@ export function Calendar({
   const [toast, setToast] = useState<string | null>(null)
   // The event a brief is being written for, if any.
   const [briefFor, setBriefFor] = useState<CalendarEvent | null>(null)
+  const [composingMeeting, setComposingMeeting] = useState(false)
 
   const connected = accounts.filter((a) => a.provider === 'google' && a.connected)
 
@@ -163,9 +165,19 @@ export function Calendar({
               : `Google events + scheduled tasks · across ${connected.length} account${connected.length === 1 ? '' : 's'}`}
           </div>
         </div>
-        <button className="btn btn-ghost" onClick={load} disabled={loading}>
-          {loading ? 'Refreshing…' : '↻ Refresh'}
-        </button>
+        <div className="cal-head-actions">
+          <button className="btn btn-ghost" onClick={load} disabled={loading}>
+            {loading ? 'Refreshing…' : '↻ Refresh'}
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={() => setComposingMeeting(true)}
+            disabled={connected.length === 0}
+            title={connected.length === 0 ? 'Connect a Google account first' : ''}
+          >
+            + New meeting
+          </button>
+        </div>
       </div>
 
       <div className="cal-legend">
@@ -268,6 +280,15 @@ export function Calendar({
           onAttached={load}
           onToast={setToast}
           onGoToSettings={onGoToSettings}
+        />
+      )}
+
+      {composingMeeting && (
+        <NewMeeting
+          accounts={connected}
+          onClose={() => setComposingMeeting(false)}
+          onCreated={load}
+          onToast={setToast}
         />
       )}
     </div>

@@ -42,6 +42,7 @@ export const IPC = {
   draftMeetingBrief: 'claude:brief',
   // Calendar
   listCalendar: 'calendar:list',
+  createEvent: 'calendar:createEvent',
   attachEventBrief: 'calendar:attachBrief'
 } as const
 

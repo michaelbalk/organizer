@@ -1,4 +1,11 @@
-import type { CalendarEvent, CalendarResult, InboxError } from '@shared/types'
+import { randomUUID } from 'crypto'
+import type {
+  CalendarEvent,
+  CalendarResult,
+  CreatedEvent,
+  CreateEventInput,
+  InboxError
+} from '@shared/types'
 import { getStore } from '../store'
 import { getAuthorizedClient } from './accounts'
 
@@ -134,6 +141,54 @@ export async function attachEventBrief(
   const description = `${base ? base + '\n\n' : ''}${BRIEF_HEADER}\n${briefText.trim()}`
 
   await client.request({ url, method: 'PATCH', data: { description } })
+}
+
+interface EntryPoint {
+  entryPointType?: string
+  uri?: string
+}
+interface CreatedEventResponse {
+  id: string
+  htmlLink?: string
+  hangoutLink?: string
+  conferenceData?: { entryPoints?: EntryPoint[] }
+}
+
+/** Creates a calendar event on the account's primary calendar, optionally with
+ *  a Google Meet link. Sends invites to attendees. Requires the calendar scope. */
+export async function createEvent(input: CreateEventInput): Promise<CreatedEvent> {
+  const client = getAuthorizedClient(input.accountId)
+
+  const body: Record<string, unknown> = {
+    summary: input.title,
+    description: input.description || undefined,
+    start: { dateTime: input.start, timeZone: input.timeZone },
+    end: { dateTime: input.end, timeZone: input.timeZone },
+    attendees: (input.attendees ?? []).map((email) => ({ email }))
+  }
+
+  let qs = 'sendUpdates=all'
+  if (input.platform === 'meet') {
+    body.conferenceData = {
+      createRequest: {
+        requestId: randomUUID(),
+        conferenceSolutionKey: { type: 'hangoutsMeet' }
+      }
+    }
+    qs += '&conferenceDataVersion=1'
+  }
+
+  const res = await client.request<CreatedEventResponse>({
+    url: `${CAL_BASE}/calendars/primary/events?${qs}`,
+    method: 'POST',
+    data: body
+  })
+  const ev = res.data
+  const meetLink =
+    ev.hangoutLink ??
+    ev.conferenceData?.entryPoints?.find((e) => e.entryPointType === 'video')?.uri ??
+    null
+  return { id: ev.id, htmlLink: ev.htmlLink ?? '', meetLink }
 }
 
 interface HttpishError {

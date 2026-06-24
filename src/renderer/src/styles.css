@@ -1718,6 +1718,10 @@ input[type='color'].folder-card-color {
   font-size: 22px;
   font-weight: 700;
 }
+.cal-head-actions {
+  display: flex;
+  gap: 8px;
+}
 .cal-legend {
   display: flex;
   gap: 16px;

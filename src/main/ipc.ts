@@ -22,9 +22,10 @@ import {
   deleteFolder,
   listFolderMessages
 } from './google/gmail'
-import { listCalendarEvents, attachEventBrief } from './google/calendar'
+import { listCalendarEvents, attachEventBrief, createEvent } from './google/calendar'
 import type {
   Account,
+  CreateEventInput,
   DraftReplyInput,
   MailActionKind,
   MeetingBriefInput,
@@ -126,6 +127,7 @@ export function registerIpc(): void {
 
   // Calendar
   ipcMain.handle(IPC.listCalendar, (_e, daysAhead?: number) => listCalendarEvents(daysAhead))
+  ipcMain.handle(IPC.createEvent, (_e, input: CreateEventInput) => createEvent(input))
   ipcMain.handle(
     IPC.attachEventBrief,
     (_e, accountId: string, calendarId: string, eventId: string, brief: string) =>
