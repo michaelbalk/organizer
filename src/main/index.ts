@@ -1,6 +1,7 @@
 import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { registerIpc } from './ipc'
+import { startReminders } from './reminders'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -38,8 +39,11 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  // Lets Windows show notifications under the app's name.
+  if (process.platform === 'win32') app.setAppUserModelId('com.organizer.app')
   registerIpc()
   createWindow()
+  startReminders()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
