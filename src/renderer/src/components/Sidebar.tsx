@@ -37,6 +37,12 @@ export function Sidebar({
 
       <nav className="nav-views">
         <button
+          className={`nav-view ${view === 'today' ? 'active' : ''}`}
+          onClick={() => onViewChange('today')}
+        >
+          <span>🎯</span> Today
+        </button>
+        <button
           className={`nav-view ${view === 'board' ? 'active' : ''}`}
           onClick={() => onViewChange('board')}
         >

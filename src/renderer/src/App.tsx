@@ -7,9 +7,10 @@ import { WorkspaceModal } from './components/WorkspaceModal'
 import { Accounts } from './components/Accounts'
 import { Inbox } from './components/Inbox'
 import { Calendar } from './components/Calendar'
+import { Today } from './components/Today'
 import { Folders } from './components/Folders'
 
-export type View = 'board' | 'email' | 'folders' | 'calendar' | 'settings'
+export type View = 'today' | 'board' | 'email' | 'folders' | 'calendar' | 'settings'
 
 /** Sidebar selection: all tasks, a kind group, or a single workspace. */
 export type Selection =
@@ -29,7 +30,7 @@ const EMPTY: AppData = {
 export default function App(): JSX.Element {
   const [data, setData] = useState<AppData>(EMPTY)
   const [loading, setLoading] = useState(true)
-  const [view, setView] = useState<View>('board')
+  const [view, setView] = useState<View>('today')
   const [selection, setSelection] = useState<Selection>({ type: 'all' })
   const [search, setSearch] = useState('')
 
@@ -78,6 +79,7 @@ export default function App(): JSX.Element {
   }, [data.tasks, selection, search, workspaceById])
 
   const headingTitle = useMemo(() => {
+    if (view === 'today') return 'Today'
     if (view === 'email') return 'Inbox'
     if (view === 'folders') return 'Folders'
     if (view === 'calendar') return 'Calendar'
@@ -118,15 +120,17 @@ export default function App(): JSX.Element {
           <div className="topbar-title">
             <h1>{headingTitle}</h1>
             <span className="topbar-sub">
-              {view === 'board'
-                ? `${visibleTasks.length} task${visibleTasks.length === 1 ? '' : 's'}`
-                : view === 'email'
-                  ? 'Unified inbox'
-                  : view === 'folders'
-                    ? 'Create, organize & annotate your folders'
-                    : view === 'calendar'
-                      ? 'Combined calendar'
-                      : 'Accounts & settings'}
+              {view === 'today'
+                ? 'Your focus for the day'
+                : view === 'board'
+                  ? `${visibleTasks.length} task${visibleTasks.length === 1 ? '' : 's'}`
+                  : view === 'email'
+                    ? 'Unified inbox'
+                    : view === 'folders'
+                      ? 'Create, organize & annotate your folders'
+                      : view === 'calendar'
+                        ? 'Combined calendar'
+                        : 'Accounts & settings'}
             </span>
           </div>
 
@@ -148,6 +152,15 @@ export default function App(): JSX.Element {
         </header>
 
         <section className="content">
+          {view === 'today' && (
+            <Today
+              tasks={data.tasks}
+              workspaceById={workspaceById}
+              onEditTask={(task) => setTaskModal({ open: true, task })}
+              onChanged={refresh}
+              onGoToCalendar={() => setView('calendar')}
+            />
+          )}
           {view === 'board' && (
             <Board
               tasks={visibleTasks}
