@@ -56,6 +56,8 @@ export function registerIpc(): void {
     store.updateTask(id, patch)
   )
   ipcMain.handle(IPC.deleteTask, (_e, id: string) => store.deleteTask(id))
+  ipcMain.handle(IPC.startTaskTimer, (_e, id: string) => store.startTimer(id))
+  ipcMain.handle(IPC.stopTaskTimer, (_e, id: string) => store.stopTimer(id))
   ipcMain.handle(
     IPC.reorderTask,
     (_e, id: string, status: TaskPatch['status'], toIndex: number) =>

@@ -46,6 +46,14 @@ export interface Account {
 
 export type TaskStatus = 'backlog' | 'todo' | 'in_progress' | 'done'
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
+export type TaskRecurrence = 'none' | 'daily' | 'weekly' | 'monthly'
+
+/** A single step in a task's checklist. */
+export interface Subtask {
+  id: string
+  title: string
+  done: boolean
+}
 
 export interface Task {
   id: string
@@ -61,8 +69,14 @@ export interface Task {
   dueTime: string | null
   /** Expected duration in minutes (planning estimate), or null. */
   estimateMinutes: number | null
-  /** Actual time spent in minutes (tracked after the fact), or null. */
+  /** Actual time spent in minutes (accumulated by the timer or entered by hand). */
   actualMinutes: number | null
+  /** Repeat cadence; completing a recurring task spawns its next occurrence. */
+  recurrence: TaskRecurrence
+  /** Step-by-step checklist. */
+  subtasks: Subtask[]
+  /** ISO timestamp when a running timer started, or null if not running. */
+  timerStartedAt: string | null
   /** Free-form labels. */
   tags: string[]
   /** Optional link back to the email/event this task came from. Phase 2. */

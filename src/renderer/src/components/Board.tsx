@@ -79,6 +79,11 @@ export function Board({
                   })
                   await onChanged()
                 }}
+                onTimerToggle={async () => {
+                  if (task.timerStartedAt) await window.api.stopTaskTimer(task.id)
+                  else await window.api.startTaskTimer(task.id)
+                  await onChanged()
+                }}
               />
             ))}
             {columns[id].length === 0 && <div className="column-empty">Drop here</div>}
@@ -95,7 +100,8 @@ function TaskCard({
   showWorkspaceChip,
   onDragStart,
   onEdit,
-  onToggleDone
+  onToggleDone,
+  onTimerToggle
 }: {
   task: Task
   workspace?: Workspace
@@ -103,10 +109,13 @@ function TaskCard({
   onDragStart: () => void
   onEdit: () => void
   onToggleDone: () => void
+  onTimerToggle: () => void
 }): JSX.Element {
   const priority = TASK_PRIORITIES.find((p) => p.id === task.priority)!
   const overdue = isOverdue(task)
   const duration = durationChip(task)
+  const running = !!task.timerStartedAt
+  const subDone = task.subtasks.filter((s) => s.done).length
 
   return (
     <div
@@ -120,16 +129,30 @@ function TaskCard({
         <span className="prio" style={{ background: priority.color }}>
           {priority.label}
         </span>
-        <button
-          className={`check ${task.status === 'done' ? 'checked' : ''}`}
-          title="Toggle done"
-          onClick={(e) => {
-            e.stopPropagation()
-            onToggleDone()
-          }}
-        >
-          ✓
-        </button>
+        <div className="card-top-right">
+          {task.status !== 'done' && (
+            <button
+              className={`timer-btn ${running ? 'running' : ''}`}
+              title={running ? 'Stop timer' : 'Start timer'}
+              onClick={(e) => {
+                e.stopPropagation()
+                onTimerToggle()
+              }}
+            >
+              {running ? '⏹' : '▶'}
+            </button>
+          )}
+          <button
+            className={`check ${task.status === 'done' ? 'checked' : ''}`}
+            title="Toggle done"
+            onClick={(e) => {
+              e.stopPropagation()
+              onToggleDone()
+            }}
+          >
+            ✓
+          </button>
+        </div>
       </div>
 
       <div className={`card-title ${task.status === 'done' ? 'done' : ''}`}>{task.title}</div>
@@ -149,6 +172,11 @@ function TaskCard({
           </span>
         )}
         {duration && <span className="chip">{duration}</span>}
+        {running && <span className="chip running-chip">● running</span>}
+        {task.subtasks.length > 0 && (
+          <span className="chip">☑ {subDone}/{task.subtasks.length}</span>
+        )}
+        {task.recurrence !== 'none' && <span className="chip">🔁 {task.recurrence}</span>}
         {task.tags.map((tag) => (
           <span key={tag} className="chip tag">
             #{tag}

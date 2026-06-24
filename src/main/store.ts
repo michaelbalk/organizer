@@ -61,7 +61,10 @@ class Store {
       ...t,
       dueTime: t.dueTime ?? null,
       estimateMinutes: t.estimateMinutes ?? null,
-      actualMinutes: t.actualMinutes ?? null
+      actualMinutes: t.actualMinutes ?? null,
+      recurrence: t.recurrence ?? 'none',
+      subtasks: t.subtasks ?? [],
+      timerStartedAt: t.timerStartedAt ?? null
     }))
     data.dismissedEmails ??= []
     data.folders ??= []
@@ -242,6 +245,9 @@ class Store {
       dueTime: input.dueTime ?? null,
       estimateMinutes: input.estimateMinutes ?? null,
       actualMinutes: input.actualMinutes ?? null,
+      recurrence: input.recurrence ?? 'none',
+      subtasks: input.subtasks ?? [],
+      timerStartedAt: input.timerStartedAt ?? null,
       tags: input.tags ?? [],
       source: input.source ?? null,
       order: this.nextOrder(status),
@@ -262,11 +268,71 @@ class Store {
     task.updatedAt = new Date().toISOString()
     if (patch.status) {
       const isDone = patch.status === 'done'
-      if (isDone && !wasDone) task.completedAt = new Date().toISOString()
+      if (isDone && !wasDone) {
+        task.completedAt = new Date().toISOString()
+        this.onCompleted(task)
+      }
       if (!isDone && wasDone) task.completedAt = null
     }
     this.persist()
     return task
+  }
+
+  // --- Time tracking ------------------------------------------------------
+
+  /** Starts a task's timer, banking any other running timer first (one at a time). */
+  startTimer(id: string): Task | null {
+    const task = this.data.tasks.find((t) => t.id === id)
+    if (!task) return null
+    this.data.tasks.forEach((t) => {
+      if (t.id !== id && t.timerStartedAt) this.stopTaskTimer(t)
+    })
+    task.timerStartedAt = new Date().toISOString()
+    if (task.status === 'backlog' || task.status === 'todo') task.status = 'in_progress'
+    task.updatedAt = new Date().toISOString()
+    this.persist()
+    return task
+  }
+
+  /** Stops a task's timer and banks the elapsed minutes into actualMinutes. */
+  stopTimer(id: string): Task | null {
+    const task = this.data.tasks.find((t) => t.id === id)
+    if (!task) return null
+    this.stopTaskTimer(task)
+    task.updatedAt = new Date().toISOString()
+    this.persist()
+    return task
+  }
+
+  private stopTaskTimer(task: Task): void {
+    if (!task.timerStartedAt) return
+    const mins = Math.max(0, Math.round((Date.now() - new Date(task.timerStartedAt).getTime()) / 60000))
+    task.actualMinutes = (task.actualMinutes ?? 0) + mins
+    task.timerStartedAt = null
+  }
+
+  /** On completion: stop any running timer and spawn the next recurring occurrence. */
+  private onCompleted(task: Task): void {
+    this.stopTaskTimer(task)
+    if (task.recurrence === 'none') return
+    const base = task.dueDate ? new Date(`${task.dueDate}T00:00`) : new Date()
+    if (task.recurrence === 'daily') base.setDate(base.getDate() + 1)
+    else if (task.recurrence === 'weekly') base.setDate(base.getDate() + 7)
+    else if (task.recurrence === 'monthly') base.setMonth(base.getMonth() + 1)
+    const now = new Date().toISOString()
+    this.data.tasks.push({
+      ...task,
+      id: randomUUID(),
+      status: 'todo',
+      dueDate: dateKeyLocal(base),
+      actualMinutes: null,
+      timerStartedAt: null,
+      completedAt: null,
+      subtasks: task.subtasks.map((s) => ({ ...s, id: randomUUID(), done: false })),
+      order: this.nextOrder('todo'),
+      createdAt: now,
+      updatedAt: now
+    })
   }
 
   deleteTask(id: string): boolean {
@@ -284,7 +350,10 @@ class Store {
 
     const wasDone = task.status === 'done'
     task.status = status
-    if (status === 'done' && !wasDone) task.completedAt = new Date().toISOString()
+    if (status === 'done' && !wasDone) {
+      task.completedAt = new Date().toISOString()
+      this.onCompleted(task)
+    }
     if (status !== 'done' && wasDone) task.completedAt = null
     task.updatedAt = new Date().toISOString()
 
@@ -316,6 +385,13 @@ const PALETTE = [
 ]
 function pickColor(index: number): string {
   return PALETTE[index % PALETTE.length]
+}
+
+/** Local-time YYYY-MM-DD (matches how dueDate is stored). */
+function dateKeyLocal(d: Date): string {
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${m}-${day}`
 }
 
 let instance: Store | null = null

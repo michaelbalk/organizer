@@ -3,8 +3,10 @@ import {
   TASK_PRIORITIES,
   TASK_STATUSES,
   kindIcon,
+  type Subtask,
   type Task,
   type TaskPriority,
+  type TaskRecurrence,
   type TaskStatus,
   type Workspace
 } from '@shared/types'
@@ -36,8 +38,23 @@ export function TaskModal({
   const [dueTime, setDueTime] = useState(task?.dueTime ?? '')
   const [estimate, setEstimate] = useState(minutesToText(task?.estimateMinutes ?? null))
   const [actual, setActual] = useState(minutesToText(task?.actualMinutes ?? null))
+  const [recurrence, setRecurrence] = useState<TaskRecurrence>(task?.recurrence ?? 'none')
+  const [subtasks, setSubtasks] = useState<Subtask[]>(task?.subtasks ?? [])
+  const [newSubtask, setNewSubtask] = useState('')
   const [tagsText, setTagsText] = useState((task?.tags ?? []).join(', '))
   const [saving, setSaving] = useState(false)
+
+  const addSub = (): void => {
+    const title = newSubtask.trim()
+    if (!title) return
+    setSubtasks([...subtasks, { id: crypto.randomUUID(), title, done: false }])
+    setNewSubtask('')
+  }
+  const toggleSub = (id: string): void =>
+    setSubtasks(subtasks.map((s) => (s.id === id ? { ...s, done: !s.done } : s)))
+  const renameSub = (id: string, title: string): void =>
+    setSubtasks(subtasks.map((s) => (s.id === id ? { ...s, title } : s)))
+  const removeSub = (id: string): void => setSubtasks(subtasks.filter((s) => s.id !== id))
 
   async function save(): Promise<void> {
     if (!title.trim()) return
@@ -57,6 +74,8 @@ export function TaskModal({
       dueTime: dueDate ? dueTime || null : null,
       estimateMinutes: textToMinutes(estimate),
       actualMinutes: textToMinutes(actual),
+      recurrence,
+      subtasks,
       tags
     }
     if (editing && task) {
@@ -202,7 +221,64 @@ export function TaskModal({
                 onChange={(e) => setActual(e.target.value)}
               />
             </label>
-            <span />
+            <label className="field">
+              <span>Repeat</span>
+              <select
+                value={recurrence}
+                onChange={(e) => setRecurrence(e.target.value as TaskRecurrence)}
+              >
+                <option value="none">Doesn&apos;t repeat</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="field">
+            <span>
+              Subtasks
+              {subtasks.length > 0 && ` · ${subtasks.filter((s) => s.done).length}/${subtasks.length}`}
+            </span>
+            <div className="subtasks">
+              {subtasks.map((s) => (
+                <div key={s.id} className="subtask-row">
+                  <button
+                    type="button"
+                    className={`check ${s.done ? 'checked' : ''}`}
+                    onClick={() => toggleSub(s.id)}
+                    title="Toggle done"
+                  >
+                    ✓
+                  </button>
+                  <input
+                    className="subtask-input"
+                    value={s.title}
+                    onChange={(e) => renameSub(s.id, e.target.value)}
+                  />
+                  <button type="button" className="icon-btn" onClick={() => removeSub(s.id)} title="Remove">
+                    ✕
+                  </button>
+                </div>
+              ))}
+              <div className="subtask-add">
+                <input
+                  className="subtask-input"
+                  value={newSubtask}
+                  placeholder="Add a step…"
+                  onChange={(e) => setNewSubtask(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      addSub()
+                    }
+                  }}
+                />
+                <button type="button" className="btn btn-ghost btn-sm" onClick={addSub}>
+                  Add
+                </button>
+              </div>
+            </div>
           </div>
 
           <label className="field">

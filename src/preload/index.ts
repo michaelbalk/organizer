@@ -36,6 +36,10 @@ const api = {
   deleteTask: (id: string): Promise<boolean> => ipcRenderer.invoke(IPC.deleteTask, id),
   reorderTask: (id: string, status: TaskStatus, toIndex: number): Promise<Task | null> =>
     ipcRenderer.invoke(IPC.reorderTask, id, status, toIndex),
+  startTaskTimer: (id: string): Promise<Task | null> =>
+    ipcRenderer.invoke(IPC.startTaskTimer, id),
+  stopTaskTimer: (id: string): Promise<Task | null> =>
+    ipcRenderer.invoke(IPC.stopTaskTimer, id),
 
   // Accounts / Google OAuth
   isGoogleConfigured: (): Promise<boolean> => ipcRenderer.invoke(IPC.googleConfigured),

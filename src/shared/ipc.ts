@@ -10,6 +10,8 @@ export const IPC = {
   updateTask: 'task:update',
   deleteTask: 'task:delete',
   reorderTask: 'task:reorder',
+  startTaskTimer: 'task:timer:start',
+  stopTaskTimer: 'task:timer:stop',
   // Accounts / Google OAuth
   googleConfigured: 'google:configured',
   connectAccount: 'account:connect',
