@@ -26,7 +26,9 @@ function createWindow(): void {
   // Open links in the system browser, never in-app. Only hand off safe schemes
   // (covers email-body links, which open via target="_blank" popups).
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^(https?:|mailto:)/i.test(url)) shell.openExternal(url)
+    if (/^(https?:|mailto:)/i.test(url)) {
+      void shell.openExternal(url).catch((e) => console.error('openExternal failed:', e))
+    }
     return { action: 'deny' }
   })
 

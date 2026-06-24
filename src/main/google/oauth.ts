@@ -21,7 +21,7 @@ const FLOW_TIMEOUT_MS = 5 * 60 * 1000
  *  3. capture the redirect, exchange the code for tokens,
  *  4. read the account's email/name from the userinfo endpoint.
  */
-export function runGoogleAuthFlow(): Promise<GoogleAuthResult> {
+export function runGoogleAuthFlow(loginHint?: string): Promise<GoogleAuthResult> {
   const cfg = getGoogleConfig()
   if (!cfg) {
     return Promise.reject(
@@ -118,7 +118,9 @@ export function runGoogleAuthFlow(): Promise<GoogleAuthResult> {
         access_type: 'offline',
         prompt: 'consent', // force a refresh_token even on re-consent
         scope: cfg.scopes,
-        state
+        state,
+        // Pre-select the right Google account when reconnecting a known one.
+        ...(loginHint ? { login_hint: loginHint } : {})
       })
 
       try {

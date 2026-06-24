@@ -72,8 +72,8 @@ export function registerIpc(): void {
 
   // Accounts / Google OAuth
   ipcMain.handle(IPC.googleConfigured, () => isGoogleConfigured())
-  ipcMain.handle(IPC.connectAccount, (_e, workspaceId: string) =>
-    connectGoogleAccount(workspaceId)
+  ipcMain.handle(IPC.connectAccount, (_e, workspaceId: string, loginHint?: string) =>
+    connectGoogleAccount(workspaceId, loginHint)
   )
   ipcMain.handle(IPC.disconnectAccount, (_e, id: string) => disconnectGoogleAccount(id))
   ipcMain.handle(IPC.removeAccount, (_e, id: string) => removeGoogleAccount(id))

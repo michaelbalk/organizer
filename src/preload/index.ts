@@ -52,8 +52,8 @@ const api = {
 
   // Accounts / Google OAuth
   isGoogleConfigured: (): Promise<boolean> => ipcRenderer.invoke(IPC.googleConfigured),
-  connectAccount: (workspaceId: string): Promise<Account> =>
-    ipcRenderer.invoke(IPC.connectAccount, workspaceId),
+  connectAccount: (workspaceId: string, loginHint?: string): Promise<Account> =>
+    ipcRenderer.invoke(IPC.connectAccount, workspaceId, loginHint),
   disconnectAccount: (id: string): Promise<boolean> =>
     ipcRenderer.invoke(IPC.disconnectAccount, id),
   removeAccount: (id: string): Promise<boolean> => ipcRenderer.invoke(IPC.removeAccount, id),

@@ -49,20 +49,30 @@ export async function createZoomMeeting(input: {
   durationMinutes: number
   agenda?: string
 }): Promise<ZoomMeeting> {
-  const token = await getAccessToken()
-  const res = await fetch(`${API_BASE}/users/me/meetings`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-    body: JSON.stringify({
-      topic: input.topic,
-      type: 2, // scheduled
-      start_time: input.start,
-      timezone: input.timeZone,
-      duration: input.durationMinutes,
-      agenda: input.agenda || undefined,
-      settings: { join_before_host: true, waiting_room: false }
-    })
+  const body = JSON.stringify({
+    topic: input.topic,
+    type: 2, // scheduled
+    start_time: input.start,
+    timezone: input.timeZone,
+    duration: input.durationMinutes,
+    agenda: input.agenda || undefined,
+    settings: { join_before_host: true, waiting_room: false }
   })
+
+  const post = (token: string): Promise<Response> =>
+    fetch(`${API_BASE}/users/me/meetings`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body
+    })
+
+  let res = await post(await getAccessToken())
+  // A revoked-before-expiry token returns 401; drop the cache and retry once.
+  if (res.status === 401) {
+    cache = null
+    res = await post(await getAccessToken())
+  }
+
   const data = (await res.json().catch(() => ({}))) as {
     id?: number | string
     join_url?: string

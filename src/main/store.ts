@@ -354,6 +354,9 @@ class Store {
       actualMinutes: null,
       timerStartedAt: null,
       completedAt: null,
+      // Clone arrays/objects so the new occurrence doesn't alias the parent's.
+      tags: [...task.tags],
+      source: task.source ? { ...task.source } : null,
       subtasks: task.subtasks.map((s) => ({ ...s, id: randomUUID(), done: false })),
       order: this.nextOrder('todo'),
       createdAt: now,
@@ -383,6 +386,8 @@ class Store {
 
   /** Move a task to a status at a given index, renumbering the column. */
   reorderTask(id: string, status: Task['status'], toIndex: number): Task | null {
+    const valid: Task['status'][] = ['backlog', 'todo', 'in_progress', 'done']
+    if (!valid.includes(status)) return null
     const task = this.data.tasks.find((t) => t.id === id)
     if (!task) return null
 

@@ -46,7 +46,19 @@ export function Accounts({ accounts, workspaces, onChanged }: Props): JSX.Elemen
     await onChanged()
   }
 
-  const reconnect = async (): Promise<void> => connect()
+  // Reconnect the SPECIFIC account: re-auth its own email into its own workspace.
+  const reconnect = async (account: Account): Promise<void> => {
+    setError(null)
+    setConnecting(true)
+    try {
+      await window.api.connectAccount(account.workspaceId, account.email)
+      await onChanged()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to reconnect account.')
+    } finally {
+      setConnecting(false)
+    }
+  }
 
   const remove = async (id: string, email: string): Promise<void> => {
     if (!window.confirm(`Remove ${email}? You can reconnect it later.`)) return
@@ -123,7 +135,7 @@ export function Accounts({ accounts, workspaces, onChanged }: Props): JSX.Elemen
                     Disconnect
                   </button>
                 ) : (
-                  <button className="btn btn-ghost" onClick={reconnect}>
+                  <button className="btn btn-ghost" onClick={() => reconnect(a)}>
                     Reconnect
                   </button>
                 )}

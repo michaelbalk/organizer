@@ -32,6 +32,11 @@ export function Contacts({
   const [onlyFollowUps, setOnlyFollowUps] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
+  // Auto-select the first contact once the list becomes non-empty.
+  useEffect(() => {
+    if (!selectedId && contacts[0]) setSelectedId(contacts[0].id)
+  }, [contacts, selectedId])
+
   useEffect(() => {
     if (!toast) return
     const t = setTimeout(() => setToast(null), 2200)

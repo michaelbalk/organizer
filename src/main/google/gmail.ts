@@ -64,6 +64,30 @@ export async function listInbox(maxPerAccount = 20): Promise<InboxResult> {
   return { emails, errors, fetchedAt: new Date().toISOString() }
 }
 
+/**
+ * Fetches metadata for a batch of message refs. Uses allSettled so one failed
+ * message (e.g. a transient 429) drops just that message, not the whole account.
+ */
+async function fetchMessagesMeta(
+  client: ReturnType<typeof getAuthorizedClient>,
+  refs: GmailMessageRef[]
+): Promise<GmailMessage[]> {
+  const settled = await Promise.allSettled(
+    refs.map((ref) =>
+      client
+        .request<GmailMessage>({
+          url:
+            `${GMAIL_BASE}/messages/${ref.id}` +
+            `?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`
+        })
+        .then((r) => r.data)
+    )
+  )
+  return settled
+    .filter((s): s is PromiseFulfilledResult<GmailMessage> => s.status === 'fulfilled')
+    .map((s) => s.value)
+}
+
 async function fetchAccountInbox(
   accountId: string,
   accountEmail: string,
@@ -77,18 +101,7 @@ async function fetchAccountInbox(
   })
   const refs = list.data.messages ?? []
 
-  const messages = await Promise.all(
-    refs.map((ref) =>
-      client
-        .request<GmailMessage>({
-          url:
-            `${GMAIL_BASE}/messages/${ref.id}` +
-            `?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`
-        })
-        .then((r) => r.data)
-    )
-  )
-
+  const messages = await fetchMessagesMeta(client, refs)
   return messages.map((m) => normalize(m, accountId, accountEmail, workspaceId))
 }
 
@@ -463,17 +476,7 @@ export async function listFolderMessages(name: string, maxPerAccount = 30): Prom
         const list = await client.request<{ messages?: GmailMessageRef[] }>({
           url: `${GMAIL_BASE}/messages?labelIds=${encodeURIComponent(match.id)}&maxResults=${maxPerAccount}`
         })
-        const messages = await Promise.all(
-          (list.data.messages ?? []).map((ref) =>
-            client
-              .request<GmailMessage>({
-                url:
-                  `${GMAIL_BASE}/messages/${ref.id}` +
-                  `?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`
-              })
-              .then((r) => r.data)
-          )
-        )
+        const messages = await fetchMessagesMeta(client, list.data.messages ?? [])
         emails.push(...messages.map((m) => normalize(m, acc.id, acc.email, acc.workspaceId)))
       } catch (err) {
         errors.push(toInboxError(acc.id, acc.email, err))

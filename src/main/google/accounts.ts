@@ -10,8 +10,11 @@ import { runGoogleAuthFlow } from './oauth'
  * workspace. Re-connecting an already-known email refreshes its tokens in place
  * rather than creating a duplicate account.
  */
-export async function connectGoogleAccount(workspaceId: string): Promise<Account> {
-  const result = await runGoogleAuthFlow()
+export async function connectGoogleAccount(
+  workspaceId: string,
+  loginHint?: string
+): Promise<Account> {
+  const result = await runGoogleAuthFlow(loginHint)
   const store = getStore()
 
   const existing = store

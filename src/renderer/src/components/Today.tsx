@@ -197,7 +197,7 @@ export function Today({ tasks, workspaceById, onEditTask, onChanged, onGoToCalen
 
 function taskMeta(t: Task): string {
   const bits: string[] = []
-  if (t.dueTime) bits.push(fmtTime(`${t.dueDate}T${t.dueTime}`))
+  if (t.dueDate && t.dueTime) bits.push(fmtTime(`${t.dueDate}T${t.dueTime}`))
   if (t.estimateMinutes != null) bits.push(`~${fmtDur(t.estimateMinutes)}`)
   if (t.subtasks.length) bits.push(`${t.subtasks.filter((s) => s.done).length}/${t.subtasks.length} steps`)
   return bits.join(' · ') || 'No time set'
