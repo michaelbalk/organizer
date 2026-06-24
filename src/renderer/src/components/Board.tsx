@@ -154,7 +154,23 @@ function TaskCard({
             #{tag}
           </span>
         ))}
-        {task.source && <span className="chip src">{task.source.kind === 'email' ? '✉️' : '📅'}</span>}
+        {task.source &&
+          (task.source.url ? (
+            <button
+              className="chip src chip-btn"
+              title={`Open source: ${task.source.label}`}
+              onClick={(e) => {
+                e.stopPropagation()
+                window.open(task.source!.url, '_blank')
+              }}
+            >
+              {task.source.kind === 'email' ? '✉️' : '📅'} open
+            </button>
+          ) : (
+            <span className="chip src" title={task.source.label}>
+              {task.source.kind === 'email' ? '✉️' : '📅'}
+            </span>
+          ))}
       </div>
     </div>
   )

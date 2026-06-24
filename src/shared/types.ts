@@ -81,6 +81,8 @@ export interface TaskSource {
   externalId: string
   /** Cached human-readable reference (subject / event title). */
   label: string
+  /** Direct link to open the source (Gmail thread / Calendar event). */
+  url?: string
 }
 
 export const TASK_STATUSES: { id: TaskStatus; label: string }[] = [

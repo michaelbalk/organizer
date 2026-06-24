@@ -108,6 +108,25 @@ export function TaskModal({
             />
           </label>
 
+          {task?.source && (
+            <div className="field">
+              <span>From {task.source.kind === 'email' ? 'email' : 'calendar event'}</span>
+              <div className="task-source">
+                <span className="task-source-label">
+                  {task.source.kind === 'email' ? '✉️' : '📅'} {task.source.label}
+                </span>
+                {task.source.url && (
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => window.open(task.source!.url, '_blank')}
+                  >
+                    Open ↗
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="field-row">
             <label className="field">
               <span>Workspace</span>

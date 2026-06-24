@@ -118,7 +118,13 @@ export function Calendar({
         dueDate: dateKey(start),
         dueTime: ev.allDay ? null : hhmm(start),
         estimateMinutes: estimate,
-        source: { kind: 'event', accountId: ev.accountId, externalId: ev.id, label: ev.title }
+        source: {
+          kind: 'event',
+          accountId: ev.accountId,
+          externalId: ev.id,
+          label: ev.title,
+          url: ev.htmlLink || undefined
+        }
       })
       await onChanged()
       setToast('Added to your tasks ✓')

@@ -189,7 +189,13 @@ export function Inbox({
         workspaceId: e.workspaceId,
         status: 'todo',
         priority: 'medium',
-        source: { kind: 'email', accountId: e.accountId, externalId: e.id, label: e.subject }
+        source: {
+          kind: 'email',
+          accountId: e.accountId,
+          externalId: e.id,
+          label: e.subject,
+          url: `https://mail.google.com/mail/u/${encodeURIComponent(e.accountEmail)}/#all/${e.threadId}`
+        }
       })
       await onChanged()
       setToast('Captured as task ✓')
