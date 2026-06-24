@@ -5,6 +5,8 @@ import { randomUUID } from 'crypto'
 import type {
   Account,
   AppData,
+  CaptureContactInput,
+  CaptureContactResult,
   Contact,
   ContactPatch,
   FolderMeta,
@@ -73,6 +75,7 @@ class Store {
     data.dismissedEmails ??= []
     data.folders ??= []
     data.contacts ??= []
+    data.contacts = data.contacts.map((c) => ({ ...c, followUpAt: c.followUpAt ?? null }))
     return data
   }
 
@@ -395,6 +398,7 @@ class Store {
       notes: input.notes ?? '',
       interactions: [],
       lastContactedAt: null,
+      followUpAt: null,
       createdAt: now,
       updatedAt: now
     }
@@ -434,6 +438,27 @@ class Store {
     contact.updatedAt = at
     this.persist()
     return contact
+  }
+
+  /** Find-or-create a contact from an email sender, logging the email. */
+  captureContactFromEmail(input: CaptureContactInput): CaptureContactResult {
+    const emailLc = input.email.trim().toLowerCase()
+    let contact = emailLc
+      ? this.data.contacts.find((c) => c.email.trim().toLowerCase() === emailLc)
+      : undefined
+
+    let created = false
+    if (!contact) {
+      contact = this.createContact({
+        name: input.name || input.email || 'Unknown',
+        email: input.email,
+        workspaceId: input.workspaceId,
+        stage: 'lead'
+      })
+      created = true
+    }
+    this.addInteraction(contact.id, { kind: 'email', note: `Email: ${input.subject}` })
+    return { created, contactId: contact.id }
   }
 }
 

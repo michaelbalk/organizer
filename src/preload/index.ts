@@ -4,6 +4,8 @@ import type {
   Account,
   AppData,
   CalendarResult,
+  CaptureContactInput,
+  CaptureContactResult,
   Contact,
   ContactPatch,
   CreatedEvent,
@@ -117,7 +119,9 @@ const api = {
     ipcRenderer.invoke(IPC.updateContact, id, patch),
   deleteContact: (id: string): Promise<boolean> => ipcRenderer.invoke(IPC.deleteContact, id),
   addInteraction: (contactId: string, input: NewInteractionInput): Promise<Contact | null> =>
-    ipcRenderer.invoke(IPC.addInteraction, contactId, input)
+    ipcRenderer.invoke(IPC.addInteraction, contactId, input),
+  captureContactFromEmail: (input: CaptureContactInput): Promise<CaptureContactResult> =>
+    ipcRenderer.invoke(IPC.captureContact, input)
 }
 
 export type OrganizerApi = typeof api

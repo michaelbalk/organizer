@@ -325,6 +325,8 @@ export interface Contact {
   interactions: ContactInteraction[]
   /** ISO of the most recent logged interaction (for follow-up sorting). */
   lastContactedAt: string | null
+  /** Optional follow-up date (YYYY-MM-DD); surfaced when due/overdue. */
+  followUpAt: string | null
   createdAt: string
   updatedAt: string
 }
@@ -344,13 +346,34 @@ export interface NewContactInput {
 export type ContactPatch = Partial<
   Pick<
     Contact,
-    'name' | 'email' | 'phone' | 'company' | 'title' | 'workspaceId' | 'stage' | 'tags' | 'notes'
+    | 'name'
+    | 'email'
+    | 'phone'
+    | 'company'
+    | 'title'
+    | 'workspaceId'
+    | 'stage'
+    | 'tags'
+    | 'notes'
+    | 'followUpAt'
   >
 >
 
 export interface NewInteractionInput {
   kind: InteractionKind
   note: string
+}
+
+/** Find-or-create a contact from an email sender, logging the email as an interaction. */
+export interface CaptureContactInput {
+  name: string
+  email: string
+  workspaceId: string
+  subject: string
+}
+export interface CaptureContactResult {
+  created: boolean
+  contactId: string
 }
 
 /** Full persisted application state. */

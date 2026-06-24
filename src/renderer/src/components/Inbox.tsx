@@ -211,6 +211,20 @@ export function Inbox({
     [onChanged]
   )
 
+  const addContact = useCallback(
+    async (e: EmailItem): Promise<void> => {
+      const res = await window.api.captureContactFromEmail({
+        name: e.from,
+        email: e.fromEmail,
+        workspaceId: e.workspaceId,
+        subject: e.subject
+      })
+      await onChanged()
+      setToast(res.created ? `Added ${e.from} to Contacts ✓` : `Logged email to ${e.from} ✓`)
+    },
+    [onChanged]
+  )
+
   const restore = useCallback(
     async (e: EmailItem): Promise<void> => {
       await window.api.undismissEmail(e.id)
@@ -470,6 +484,7 @@ export function Inbox({
             workspaceName={workspaceById.get(reading.workspaceId)?.name ?? ''}
             onToast={setToast}
             onCapture={capture}
+            onAddContact={addContact}
             onServerChanged={load}
             onDeselect={() => setReading(null)}
             onGoToSettings={onGoToSettings}

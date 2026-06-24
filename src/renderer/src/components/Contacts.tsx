@@ -20,17 +20,25 @@ interface Props {
 export function Contacts({ contacts, workspaces, workspaceById, onChanged }: Props): JSX.Element {
   const [selectedId, setSelectedId] = useState<string | null>(contacts[0]?.id ?? null)
   const [search, setSearch] = useState('')
+  const [onlyFollowUps, setOnlyFollowUps] = useState(false)
+
+  const today = todayKey()
+  const isOverdue = (c: Contact): boolean =>
+    !!c.followUpAt && c.followUpAt <= today && c.stage !== 'archived'
+  const overdueCount = contacts.filter(isOverdue).length
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     return [...contacts]
+      .filter((c) => !onlyFollowUps || isOverdue(c))
       .filter(
         (c) =>
           !q ||
           `${c.name} ${c.company} ${c.email} ${c.tags.join(' ')}`.toLowerCase().includes(q)
       )
       .sort((a, b) => a.name.localeCompare(b.name))
-  }, [contacts, search])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contacts, search, onlyFollowUps, today])
 
   const selected = contacts.find((c) => c.id === selectedId) ?? null
 
@@ -58,6 +66,15 @@ export function Contacts({ contacts, workspaces, workspaceById, onChanged }: Pro
           </button>
         </div>
 
+        {overdueCount > 0 && (
+          <button
+            className={`crm-followup-chip ${onlyFollowUps ? 'active' : ''}`}
+            onClick={() => setOnlyFollowUps((v) => !v)}
+          >
+            🔔 {overdueCount} follow-up{overdueCount === 1 ? '' : 's'} due
+          </button>
+        )}
+
         {filtered.length === 0 ? (
           <div className="crm-empty">
             {contacts.length === 0 ? 'No contacts yet — add your first.' : 'No matches.'}
@@ -75,7 +92,10 @@ export function Contacts({ contacts, workspaces, workspaceById, onChanged }: Pro
                 >
                   <span className="crm-dot" style={{ background: ws?.color ?? '#64748b' }} />
                   <div className="crm-row-main">
-                    <div className="crm-row-name">{c.name}</div>
+                    <div className="crm-row-name">
+                      {isOverdue(c) && <span title="Follow-up due">🔔 </span>}
+                      {c.name}
+                    </div>
                     <div className="crm-row-sub muted">{c.company || c.email || '—'}</div>
                   </div>
                   <span
@@ -129,6 +149,7 @@ function ContactDetail({
   const [title, setTitle] = useState(contact.title)
   const [notes, setNotes] = useState(contact.notes)
   const [tagsText, setTagsText] = useState(contact.tags.join(', '))
+  const [followUp, setFollowUp] = useState(contact.followUpAt ?? '')
   const [logKind, setLogKind] = useState<InteractionKind>('note')
   const [logNote, setLogNote] = useState('')
 
@@ -216,6 +237,21 @@ function ContactDetail({
           </label>
         </div>
 
+        <div className="field-row">
+          <label className="field">
+            <span>Follow-up date</span>
+            <input
+              type="date"
+              value={followUp}
+              onChange={(e) => {
+                setFollowUp(e.target.value)
+                save({ followUpAt: e.target.value || null })
+              }}
+            />
+          </label>
+          <span />
+        </div>
+
         <label className="field">
           <span>Tags (comma-separated)</span>
           <input
@@ -290,4 +326,10 @@ function formatWhen(iso: string): string {
     hour: 'numeric',
     minute: '2-digit'
   })
+}
+
+function todayKey(): string {
+  const d = new Date()
+  const p = (n: number): string => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }

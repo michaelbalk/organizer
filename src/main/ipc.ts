@@ -25,6 +25,7 @@ import {
 import { listCalendarEvents, attachEventBrief, createEvent } from './google/calendar'
 import type {
   Account,
+  CaptureContactInput,
   ContactPatch,
   CreateEventInput,
   DraftReplyInput,
@@ -145,5 +146,8 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.deleteContact, (_e, id: string) => store.deleteContact(id))
   ipcMain.handle(IPC.addInteraction, (_e, contactId: string, input: NewInteractionInput) =>
     store.addInteraction(contactId, input)
+  )
+  ipcMain.handle(IPC.captureContact, (_e, input: CaptureContactInput) =>
+    store.captureContactFromEmail(input)
   )
 }

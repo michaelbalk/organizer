@@ -8,6 +8,7 @@ interface Props {
   onToast: (msg: string) => void
   /** Capture the email as a task (owned by the inbox). */
   onCapture: (e: EmailItem) => Promise<void>
+  onAddContact: (e: EmailItem) => Promise<void>
   /** Reload the inbox after a server-side mutation (archive/trash/file/send). */
   onServerChanged: () => Promise<void>
   /** Close the reading pane (e.g. after the message leaves the inbox). */
@@ -42,6 +43,7 @@ export function MessageReader({
   workspaceName,
   onToast,
   onCapture,
+  onAddContact,
   onServerChanged,
   onDeselect,
   onGoToSettings
@@ -280,6 +282,14 @@ export function MessageReader({
           {full?.unread ? '✓ Mark read' : '• Mark unread'}
         </button>
         <span className="reader-actions-gap" />
+        <button
+          className="btn btn-sm btn-ghost"
+          disabled={busy}
+          onClick={() => onAddContact(email)}
+          title="Add the sender to Contacts and log this email"
+        >
+          + Contact
+        </button>
         <button className="btn btn-sm btn-ghost" disabled={busy} onClick={() => onCapture(email)} title="Capture as a task">
           + Task
         </button>
