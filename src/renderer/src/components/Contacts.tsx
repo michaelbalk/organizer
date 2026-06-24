@@ -8,6 +8,7 @@ import {
   type Task,
   type Workspace
 } from '@shared/types'
+import { isTaskOverdue } from '@shared/tasks'
 import { ContactBriefModal } from './ContactBriefModal'
 
 interface Props {
@@ -43,12 +44,9 @@ export function Contacts({
     return () => clearTimeout(t)
   }, [toast])
 
-  const today = todayKey()
-  // A contact "needs follow-up" if it has an open task that's due/overdue.
+  // A contact "needs follow-up" if it has an open task that's overdue.
   const isOverdue = (c: Contact): boolean =>
-    tasks.some(
-      (t) => t.contactId === c.id && t.status !== 'done' && !!t.dueDate && t.dueDate <= today
-    )
+    tasks.some((t) => t.contactId === c.id && isTaskOverdue(t))
   const overdueCount = contacts.filter(isOverdue).length
 
   const filtered = useMemo(() => {
@@ -62,7 +60,7 @@ export function Contacts({
       )
       .sort((a, b) => a.name.localeCompare(b.name))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contacts, search, onlyFollowUps, today])
+  }, [contacts, search, onlyFollowUps, tasks])
 
   const selected = contacts.find((c) => c.id === selectedId) ?? null
 
@@ -221,7 +219,6 @@ function ContactDetail({
     await onChanged()
   }
 
-  const today = todayKey()
   const openTasks = tasks
     .filter((t) => t.status !== 'done')
     .sort((a, b) => (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999'))
@@ -368,7 +365,7 @@ function ContactDetail({
                 <div className="crm-task-main">
                   <div className="crm-task-title">{t.title}</div>
                   {t.dueDate && (
-                    <div className={`crm-task-due muted ${t.dueDate <= today ? 'overdue' : ''}`}>
+                    <div className={`crm-task-due muted ${isTaskOverdue(t) ? 'overdue' : ''}`}>
                       📆 {t.dueDate}
                       {t.dueTime ? ` ${t.dueTime}` : ''}
                     </div>
@@ -459,8 +456,3 @@ function formatWhen(iso: string): string {
   })
 }
 
-function todayKey(): string {
-  const d = new Date()
-  const p = (n: number): string => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
-}

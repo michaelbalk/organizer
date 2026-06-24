@@ -478,7 +478,12 @@ class Store {
 
   /** Find-or-create a contact from an email sender, logging the email. */
   captureContactFromEmail(input: CaptureContactInput): CaptureContactResult {
-    const emailLc = input.email.trim().toLowerCase()
+    // Only treat the sender as an email if it actually looks like one
+    // (some senders, e.g. "Mail Delivery System", have no real address).
+    const raw = input.email.trim()
+    const isEmail = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(raw)
+    const emailLc = isEmail ? raw.toLowerCase() : ''
+
     let contact = emailLc
       ? this.data.contacts.find((c) => c.email.trim().toLowerCase() === emailLc)
       : undefined
@@ -486,8 +491,8 @@ class Store {
     let created = false
     if (!contact) {
       contact = this.createContact({
-        name: input.name || input.email || 'Unknown',
-        email: input.email,
+        name: input.name || (isEmail ? raw : 'Unknown'),
+        email: isEmail ? raw : '',
         workspaceId: input.workspaceId,
         stage: 'other'
       })

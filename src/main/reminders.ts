@@ -42,7 +42,8 @@ function checkTasks(now: number): void {
       notify(`task-soon-${t.id}-${dueMs}`, 'Task due soon', `${t.title} — in ${Math.round(mins)} min`)
     }
     // Due now (fire once as it crosses, within a 2h trailing window).
-    if (mins <= 0 && mins > -120) {
+    // Only for timed tasks — an all-day task shouldn't buzz at the 09:00 default.
+    if (t.dueTime && mins <= 0 && mins > -120) {
       notify(`task-due-${t.id}-${dueMs}`, 'Task due', t.title)
     }
   }

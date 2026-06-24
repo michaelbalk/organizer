@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { CalendarEvent, CalendarResult, Task, Workspace } from '@shared/types'
+import { isTaskOverdue } from '@shared/tasks'
 
 interface Props {
   tasks: Task[]
@@ -133,7 +134,7 @@ export function Today({ tasks, workspaceById, onEditTask, onChanged, onGoToCalen
           ) : (
             <ul className="today-list">
               {dueTasks.map((t) => {
-                const overdue = (t.dueDate ?? '') < todayKey
+                const overdue = isTaskOverdue(t)
                 return (
                   <li key={t.id} className="today-item" style={{ borderLeftColor: colorOf(t.workspaceId) }}>
                     <button

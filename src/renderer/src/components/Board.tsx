@@ -7,6 +7,7 @@ import {
   type TaskStatus,
   type Workspace
 } from '@shared/types'
+import { isTaskOverdue } from '@shared/tasks'
 
 interface Props {
   tasks: Task[]
@@ -112,7 +113,7 @@ function TaskCard({
   onTimerToggle: () => void
 }): JSX.Element {
   const priority = TASK_PRIORITIES.find((p) => p.id === task.priority)!
-  const overdue = isOverdue(task)
+  const overdue = isTaskOverdue(task)
   const duration = durationChip(task)
   const running = !!task.timerStartedAt
   const subDone = task.subtasks.filter((s) => s.done).length
@@ -202,13 +203,6 @@ function TaskCard({
       </div>
     </div>
   )
-}
-
-/** A task is overdue once its due moment passes (end-of-day when no time set). */
-function isOverdue(task: Task): boolean {
-  if (!task.dueDate || task.status === 'done') return false
-  const due = new Date(`${task.dueDate}T${task.dueTime || '23:59'}`)
-  return due.getTime() < Date.now()
 }
 
 /** Compact estimate/actual chip, e.g. "⏱ 30m → 45m". */
