@@ -2,6 +2,7 @@ import { useState } from 'react'
 import {
   TASK_STATUSES,
   TASK_PRIORITIES,
+  kindIcon,
   type Task,
   type TaskStatus,
   type Workspace
@@ -138,7 +139,7 @@ function TaskCard({
       <div className="card-meta">
         {showWorkspaceChip && workspace && (
           <span className="chip" style={{ background: `${workspace.color}22`, color: workspace.color }}>
-            {workspace.kind === 'business' ? '🏢' : '👤'} {workspace.name}
+            {kindIcon(workspace.kind)} {workspace.name}
           </span>
         )}
         {task.dueDate && (

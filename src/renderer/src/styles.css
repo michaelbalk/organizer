@@ -1507,6 +1507,25 @@ input[type='color'].folder-card-color {
   font-size: 22px;
   font-weight: 700;
 }
+.cal-legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 2px 2px 4px;
+}
+.cal-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.cal-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex: none;
+}
 .cal-days {
   display: flex;
   flex-direction: column;

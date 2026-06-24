@@ -1,4 +1,4 @@
-import type { Task, Workspace } from '@shared/types'
+import { WORKSPACE_KINDS, type Task, type WorkspaceKind, type Workspace } from '@shared/types'
 import type { Selection, View } from '../App'
 
 interface Props {
@@ -20,15 +20,12 @@ export function Sidebar({
   onViewChange,
   onAddWorkspace
 }: Props): JSX.Element {
-  const personal = workspaces.filter((w) => w.kind === 'personal')
-  const business = workspaces.filter((w) => w.kind === 'business')
-
   const openCount = (predicate: (t: Task) => boolean): number =>
     tasks.filter((t) => t.status !== 'done' && predicate(t)).length
 
   const isWs = (id: string): boolean =>
     selection.type === 'workspace' && selection.workspaceId === id
-  const isKind = (kind: 'personal' | 'business'): boolean =>
+  const isKind = (kind: WorkspaceKind): boolean =>
     selection.type === 'kind' && selection.kind === kind
 
   return (
@@ -82,44 +79,29 @@ export function Sidebar({
             <span className="count">{openCount(() => true)}</span>
           </button>
 
-          <div className="nav-group">
-            <button
-              className={`nav-group-head ${isKind('personal') ? 'active' : ''}`}
-              onClick={() => onSelect({ type: 'kind', kind: 'personal' })}
-            >
-              Personal
-            </button>
-            {personal.map((w) => (
-              <WsRow
-                key={w.id}
-                w={w}
-                active={isWs(w.id)}
-                count={openCount((t) => t.workspaceId === w.id)}
-                onClick={() => onSelect({ type: 'workspace', workspaceId: w.id })}
-              />
-            ))}
-          </div>
-
-          <div className="nav-group">
-            <button
-              className={`nav-group-head ${isKind('business') ? 'active' : ''}`}
-              onClick={() => onSelect({ type: 'kind', kind: 'business' })}
-            >
-              Business
-            </button>
-            {business.map((w) => (
-              <WsRow
-                key={w.id}
-                w={w}
-                active={isWs(w.id)}
-                count={openCount((t) => t.workspaceId === w.id)}
-                onClick={() => onSelect({ type: 'workspace', workspaceId: w.id })}
-              />
-            ))}
-            {business.length === 0 && (
-              <p className="nav-empty">No companies yet.</p>
-            )}
-          </div>
+          {WORKSPACE_KINDS.map((k) => {
+            const list = workspaces.filter((w) => w.kind === k.id)
+            return (
+              <div className="nav-group" key={k.id}>
+                <button
+                  className={`nav-group-head ${isKind(k.id) ? 'active' : ''}`}
+                  onClick={() => onSelect({ type: 'kind', kind: k.id })}
+                >
+                  {k.label}
+                </button>
+                {list.map((w) => (
+                  <WsRow
+                    key={w.id}
+                    w={w}
+                    active={isWs(w.id)}
+                    count={openCount((t) => t.workspaceId === w.id)}
+                    onClick={() => onSelect({ type: 'workspace', workspaceId: w.id })}
+                  />
+                ))}
+                {list.length === 0 && <p className="nav-empty">None yet.</p>}
+              </div>
+            )
+          })}
 
           <button className="nav-add" onClick={onAddWorkspace}>
             + Add workspace

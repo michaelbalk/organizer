@@ -2,6 +2,7 @@ import { useState } from 'react'
 import {
   TASK_PRIORITIES,
   TASK_STATUSES,
+  kindIcon,
   type Task,
   type TaskPriority,
   type TaskStatus,
@@ -113,7 +114,7 @@ export function TaskModal({
               <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)}>
                 {workspaces.map((w) => (
                   <option key={w.id} value={w.id}>
-                    {w.kind === 'business' ? '🏢' : '👤'} {w.name}
+                    {kindIcon(w.kind)} {w.name}
                   </option>
                 ))}
               </select>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { WorkspaceKind } from '@shared/types'
+import { WORKSPACE_KINDS, type WorkspaceKind } from '@shared/types'
 
 interface Props {
   onClose: () => void
@@ -46,19 +46,16 @@ export function WorkspaceModal({ onClose, onSaved }: Props): JSX.Element {
 
           <label className="field">
             <span>Type</span>
-            <div className="segmented">
-              <button
-                className={kind === 'personal' ? 'active' : ''}
-                onClick={() => setKind('personal')}
-              >
-                👤 Personal
-              </button>
-              <button
-                className={kind === 'business' ? 'active' : ''}
-                onClick={() => setKind('business')}
-              >
-                🏢 Business
-              </button>
+            <div className="segmented" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+              {WORKSPACE_KINDS.map((k) => (
+                <button
+                  key={k.id}
+                  className={kind === k.id ? 'active' : ''}
+                  onClick={() => setKind(k.id)}
+                >
+                  {k.icon} {k.label}
+                </button>
+              ))}
             </div>
           </label>
 

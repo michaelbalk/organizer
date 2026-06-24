@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { Account, CalendarEvent, CalendarResult, Task, Workspace } from '@shared/types'
+import {
+  WORKSPACE_KINDS,
+  kindColor,
+  type Account,
+  type CalendarEvent,
+  type CalendarResult,
+  type Task,
+  type Workspace
+} from '@shared/types'
 import { BriefModal } from './BriefModal'
 
 interface Props {
@@ -57,8 +65,9 @@ export function Calendar({
     return () => clearTimeout(t)
   }, [toast])
 
+  // Color calendar entries by category (personal / business / school).
   const colorOf = useCallback(
-    (workspaceId: string) => workspaceById.get(workspaceId)?.color ?? '#64748b',
+    (workspaceId: string) => kindColor(workspaceById.get(workspaceId)?.kind),
     [workspaceById]
   )
 
@@ -157,6 +166,15 @@ export function Calendar({
         <button className="btn btn-ghost" onClick={load} disabled={loading}>
           {loading ? 'Refreshing…' : '↻ Refresh'}
         </button>
+      </div>
+
+      <div className="cal-legend">
+        {WORKSPACE_KINDS.map((k) => (
+          <span key={k.id} className="cal-legend-item">
+            <span className="cal-legend-dot" style={{ background: k.color }} />
+            {k.label}
+          </span>
+        ))}
       </div>
 
       <div className="cal-days">

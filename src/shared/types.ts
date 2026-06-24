@@ -1,7 +1,24 @@
 // Shared domain types used by both the Electron main process and the React renderer.
 
-/** A "context" separates spheres of life. Personal vs. one of several businesses. */
-export type WorkspaceKind = 'personal' | 'business'
+/** A "context" separates spheres of life: personal, a business, or school. */
+export type WorkspaceKind = 'personal' | 'business' | 'school'
+
+/** The three categories, each with a designated label, icon, and color. */
+export const WORKSPACE_KINDS: { id: WorkspaceKind; label: string; icon: string; color: string }[] = [
+  { id: 'personal', label: 'Personal', icon: '👤', color: '#2563eb' },
+  { id: 'business', label: 'Business', icon: '🏢', color: '#d97706' },
+  { id: 'school', label: 'School', icon: '🎓', color: '#9333ea' }
+]
+
+/** Designated category color for a workspace kind (used to color the calendar). */
+export function kindColor(kind: WorkspaceKind | undefined): string {
+  return WORKSPACE_KINDS.find((k) => k.id === kind)?.color ?? '#64748b'
+}
+
+/** Category icon for a workspace kind. */
+export function kindIcon(kind: WorkspaceKind | undefined): string {
+  return WORKSPACE_KINDS.find((k) => k.id === kind)?.icon ?? '•'
+}
 
 export interface Workspace {
   id: string

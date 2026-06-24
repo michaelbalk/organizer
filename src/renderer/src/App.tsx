@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { AppData, Task, Workspace } from '@shared/types'
+import { WORKSPACE_KINDS, type AppData, type Task, type WorkspaceKind, type Workspace } from '@shared/types'
 import { Sidebar } from './components/Sidebar'
 import { Board } from './components/Board'
 import { TaskModal } from './components/TaskModal'
@@ -14,7 +14,7 @@ export type View = 'board' | 'email' | 'folders' | 'calendar' | 'settings'
 /** Sidebar selection: all tasks, a kind group, or a single workspace. */
 export type Selection =
   | { type: 'all' }
-  | { type: 'kind'; kind: 'personal' | 'business' }
+  | { type: 'kind'; kind: WorkspaceKind }
   | { type: 'workspace'; workspaceId: string }
 
 const EMPTY: AppData = {
@@ -84,7 +84,7 @@ export default function App(): JSX.Element {
     if (view === 'settings') return 'Settings'
     if (selection.type === 'all') return 'All Tasks'
     if (selection.type === 'kind')
-      return selection.kind === 'personal' ? 'Personal' : 'Business'
+      return WORKSPACE_KINDS.find((k) => k.id === selection.kind)?.label ?? 'Tasks'
     return workspaceById.get(selection.workspaceId)?.name ?? 'Tasks'
   }, [view, selection, workspaceById])
 
