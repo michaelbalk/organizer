@@ -2,7 +2,7 @@ import { ipcMain, shell } from 'electron'
 import { IPC } from '@shared/ipc'
 import { getStore } from './store'
 import { isGoogleConfigured, isAnthropicConfigured } from './config'
-import { draftReply, draftMeetingBrief } from './anthropic'
+import { draftReply, draftMeetingBrief, draftContactBrief } from './anthropic'
 import {
   connectGoogleAccount,
   disconnectGoogleAccount,
@@ -26,6 +26,7 @@ import { listCalendarEvents, attachEventBrief, createEvent } from './google/cale
 import type {
   Account,
   CaptureContactInput,
+  ContactBriefInput,
   ContactPatch,
   CreateEventInput,
   DraftReplyInput,
@@ -149,5 +150,9 @@ export function registerIpc(): void {
   )
   ipcMain.handle(IPC.captureContact, (_e, input: CaptureContactInput) =>
     store.captureContactFromEmail(input)
+  )
+  ipcMain.handle(IPC.draftContactBrief, (_e, input: ContactBriefInput) => draftContactBrief(input))
+  ipcMain.handle(IPC.setContactBriefing, (_e, id: string, text: string) =>
+    store.setContactBriefing(id, text)
   )
 }

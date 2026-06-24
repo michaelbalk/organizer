@@ -310,6 +310,12 @@ export interface ContactInteraction {
   note: string
 }
 
+/** A Claude-generated analysis attached to a contact record. */
+export interface ContactBriefing {
+  text: string
+  generatedAt: string
+}
+
 export interface Contact {
   id: string
   name: string
@@ -327,8 +333,23 @@ export interface Contact {
   lastContactedAt: string | null
   /** Optional follow-up date (YYYY-MM-DD); surfaced when due/overdue. */
   followUpAt: string | null
+  /** Latest Claude-generated briefing attached to this contact. */
+  briefing: ContactBriefing | null
   createdAt: string
   updatedAt: string
+}
+
+/** Contact details handed to Claude to produce a relationship briefing. */
+export interface ContactBriefInput {
+  name: string
+  company?: string
+  title?: string
+  email?: string
+  stage?: string
+  tags?: string[]
+  notes?: string
+  interactions?: { at: string; kind: string; note: string }[]
+  guidance?: string
 }
 
 export interface NewContactInput {

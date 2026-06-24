@@ -75,7 +75,11 @@ class Store {
     data.dismissedEmails ??= []
     data.folders ??= []
     data.contacts ??= []
-    data.contacts = data.contacts.map((c) => ({ ...c, followUpAt: c.followUpAt ?? null }))
+    data.contacts = data.contacts.map((c) => ({
+      ...c,
+      followUpAt: c.followUpAt ?? null,
+      briefing: c.briefing ?? null
+    }))
     return data
   }
 
@@ -399,6 +403,7 @@ class Store {
       interactions: [],
       lastContactedAt: null,
       followUpAt: null,
+      briefing: null,
       createdAt: now,
       updatedAt: now
     }
@@ -459,6 +464,16 @@ class Store {
     }
     this.addInteraction(contact.id, { kind: 'email', note: `Email: ${input.subject}` })
     return { created, contactId: contact.id }
+  }
+
+  /** Attaches a Claude-generated briefing to a contact. */
+  setContactBriefing(id: string, text: string): Contact | null {
+    const contact = this.data.contacts.find((c) => c.id === id)
+    if (!contact) return null
+    contact.briefing = { text: text.trim(), generatedAt: new Date().toISOString() }
+    contact.updatedAt = new Date().toISOString()
+    this.persist()
+    return contact
   }
 }
 

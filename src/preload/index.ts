@@ -7,6 +7,7 @@ import type {
   CaptureContactInput,
   CaptureContactResult,
   Contact,
+  ContactBriefInput,
   ContactPatch,
   CreatedEvent,
   CreateEventInput,
@@ -121,7 +122,11 @@ const api = {
   addInteraction: (contactId: string, input: NewInteractionInput): Promise<Contact | null> =>
     ipcRenderer.invoke(IPC.addInteraction, contactId, input),
   captureContactFromEmail: (input: CaptureContactInput): Promise<CaptureContactResult> =>
-    ipcRenderer.invoke(IPC.captureContact, input)
+    ipcRenderer.invoke(IPC.captureContact, input),
+  draftContactBrief: (input: ContactBriefInput): Promise<string> =>
+    ipcRenderer.invoke(IPC.draftContactBrief, input),
+  setContactBriefing: (id: string, text: string): Promise<Contact | null> =>
+    ipcRenderer.invoke(IPC.setContactBriefing, id, text)
 }
 
 export type OrganizerApi = typeof api

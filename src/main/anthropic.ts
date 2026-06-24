@@ -1,4 +1,4 @@
-import type { DraftReplyInput, MeetingBriefInput } from '@shared/types'
+import type { ContactBriefInput, DraftReplyInput, MeetingBriefInput } from '@shared/types'
 import { getAnthropicConfig, type AnthropicConfig } from './config'
 
 const MESSAGES_URL = 'https://api.anthropic.com/v1/messages'
@@ -96,6 +96,46 @@ export async function draftMeetingBrief(input: MeetingBriefInput): Promise<strin
       ? `Focus the brief on: ${input.guidance}`
       : 'Prepare me to lead this meeting effectively.'
   ].filter(Boolean)
+
+  return callClaude(cfg, system, lines.join('\n'))
+}
+
+/** Analyzes a contact (details + interaction history) into a relationship briefing. */
+export async function draftContactBrief(input: ContactBriefInput): Promise<string> {
+  const cfg = getAnthropicConfig()
+  if (!cfg) {
+    throw new Error('Claude is not configured. Add ANTHROPIC_API_KEY to your .env file.')
+  }
+
+  const system = [
+    'You are a CRM analyst preparing a concise briefing on a contact for the account owner.',
+    'Analyze who they are and the state of the relationship from the details and interaction history provided.',
+    'Write skimmable plain text (no markdown headings or "#"), covering in this order: a one-line snapshot (role + company); the relationship status; a short summary of recent interactions; 2-3 recommended next steps or talking points; and a suggested follow-up.',
+    'Be specific and ground claims in the provided data — do not invent facts. Keep it under ~200 words. Output only the briefing.'
+  ].join(' ')
+
+  const lines = [
+    `Contact: ${input.name}`,
+    input.title ? `Title: ${input.title}` : '',
+    input.company ? `Company: ${input.company}` : '',
+    input.email ? `Email: ${input.email}` : '',
+    input.stage ? `Pipeline stage: ${input.stage}` : '',
+    input.tags?.length ? `Tags: ${input.tags.join(', ')}` : '',
+    input.notes ? `Notes: ${input.notes}` : ''
+  ].filter(Boolean)
+
+  if (input.interactions?.length) {
+    lines.push('', 'Interaction history (most recent first):')
+    for (const it of input.interactions.slice(0, 15)) {
+      lines.push(`- [${it.kind}] ${new Date(it.at).toLocaleDateString()} — ${it.note}`)
+    }
+  }
+  lines.push(
+    '',
+    input.guidance?.trim()
+      ? `Focus the briefing on: ${input.guidance.trim()}`
+      : 'Prepare me to engage this contact effectively.'
+  )
 
   return callClaude(cfg, system, lines.join('\n'))
 }

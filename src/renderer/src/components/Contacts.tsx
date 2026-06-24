@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   CONTACT_STAGES,
   type Contact,
@@ -7,6 +7,7 @@ import {
   type InteractionKind,
   type Workspace
 } from '@shared/types'
+import { ContactBriefModal } from './ContactBriefModal'
 
 interface Props {
   contacts: Contact[]
@@ -21,6 +22,13 @@ export function Contacts({ contacts, workspaces, workspaceById, onChanged }: Pro
   const [selectedId, setSelectedId] = useState<string | null>(contacts[0]?.id ?? null)
   const [search, setSearch] = useState('')
   const [onlyFollowUps, setOnlyFollowUps] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(null), 2200)
+    return () => clearTimeout(t)
+  }, [toast])
 
   const today = todayKey()
   const isOverdue = (c: Contact): boolean =>
@@ -118,6 +126,7 @@ export function Contacts({ contacts, workspaces, workspaceById, onChanged }: Pro
             contact={selected}
             workspaces={workspaces}
             onChanged={onChanged}
+            onToast={setToast}
             onDeleted={() => setSelectedId(null)}
           />
         ) : (
@@ -127,6 +136,8 @@ export function Contacts({ contacts, workspaces, workspaceById, onChanged }: Pro
           </div>
         )}
       </div>
+
+      {toast && <div className="toast">{toast}</div>}
     </div>
   )
 }
@@ -135,13 +146,16 @@ function ContactDetail({
   contact,
   workspaces,
   onChanged,
+  onToast,
   onDeleted
 }: {
   contact: Contact
   workspaces: Workspace[]
   onChanged: () => Promise<void>
+  onToast: (msg: string) => void
   onDeleted: () => void
 }): JSX.Element {
+  const [briefOpen, setBriefOpen] = useState(false)
   const [name, setName] = useState(contact.name)
   const [email, setEmail] = useState(contact.email)
   const [phone, setPhone] = useState(contact.phone)
@@ -183,6 +197,9 @@ function ContactDetail({
           onChange={(e) => setName(e.target.value)}
           onBlur={() => name.trim() !== contact.name && save({ name: name.trim() || 'Unnamed contact' })}
         />
+        <button className="btn btn-ghost btn-sm" onClick={() => setBriefOpen(true)}>
+          ✨ Brief
+        </button>
         <button className="btn btn-danger-ghost btn-sm" onClick={remove}>
           Delete
         </button>
@@ -269,6 +286,16 @@ function ContactDetail({
         </label>
       </div>
 
+      {contact.briefing && (
+        <div className="crm-brief">
+          <div className="crm-brief-head">
+            <span>✨ Claude briefing</span>
+            <span className="muted">{formatWhen(contact.briefing.generatedAt)}</span>
+          </div>
+          <div className="crm-brief-text">{contact.briefing.text}</div>
+        </div>
+      )}
+
       <div className="crm-log-section">
         <div className="crm-log-head">Interaction log</div>
         <div className="crm-log-add">
@@ -308,6 +335,15 @@ function ContactDetail({
           </ul>
         )}
       </div>
+
+      {briefOpen && (
+        <ContactBriefModal
+          contact={contact}
+          onClose={() => setBriefOpen(false)}
+          onSaved={onChanged}
+          onToast={onToast}
+        />
+      )}
     </div>
   )
 }
