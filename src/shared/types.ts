@@ -81,6 +81,8 @@ export interface Task {
   tags: string[]
   /** Optional link back to the email/event this task came from. Phase 2. */
   source: TaskSource | null
+  /** Optional link to a CRM contact this task is for. */
+  contactId: string | null
   /** Manual ordering within a status column. */
   order: number
   createdAt: string
@@ -317,7 +319,7 @@ export const CONTACT_STAGES: { id: ContactStage; label: string; color: string }[
   { id: 'other', label: 'Other', color: '#6b7280' }
 ]
 
-export type InteractionKind = 'note' | 'call' | 'email' | 'meeting'
+export type InteractionKind = 'note' | 'call' | 'email' | 'meeting' | 'task'
 
 export interface ContactInteraction {
   id: string

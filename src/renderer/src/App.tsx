@@ -209,6 +209,7 @@ export default function App(): JSX.Element {
           {view === 'contacts' && (
             <Contacts
               contacts={data.contacts}
+              tasks={data.tasks}
               workspaces={data.workspaces}
               workspaceById={workspaceById}
               onChanged={refresh}

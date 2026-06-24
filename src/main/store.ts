@@ -71,7 +71,8 @@ class Store {
       actualMinutes: t.actualMinutes ?? null,
       recurrence: t.recurrence ?? 'none',
       subtasks: t.subtasks ?? [],
-      timerStartedAt: t.timerStartedAt ?? null
+      timerStartedAt: t.timerStartedAt ?? null,
+      contactId: t.contactId ?? null
     }))
     data.dismissedEmails ??= []
     data.folders ??= []
@@ -273,6 +274,7 @@ class Store {
       timerStartedAt: input.timerStartedAt ?? null,
       tags: input.tags ?? [],
       source: input.source ?? null,
+      contactId: input.contactId ?? null,
       order: this.nextOrder(status),
       createdAt: now,
       updatedAt: now,
@@ -334,9 +336,10 @@ class Store {
     task.timerStartedAt = null
   }
 
-  /** On completion: stop any running timer and spawn the next recurring occurrence. */
+  /** On completion: stop the timer, log to a linked contact, spawn the next recurrence. */
   private onCompleted(task: Task): void {
     this.stopTaskTimer(task)
+    this.logTaskToContact(task)
     if (task.recurrence === 'none') return
     const base = task.dueDate ? new Date(`${task.dueDate}T00:00`) : new Date()
     if (task.recurrence === 'daily') base.setDate(base.getDate() + 1)
@@ -356,6 +359,18 @@ class Store {
       createdAt: now,
       updatedAt: now
     })
+  }
+
+  /** Records a completed contact-linked task in that contact's interaction log. */
+  private logTaskToContact(task: Task): void {
+    if (!task.contactId) return
+    const contact = this.data.contacts.find((c) => c.id === task.contactId)
+    if (!contact) return
+    const at = new Date().toISOString()
+    const result = task.notes?.trim() ? ` — ${task.notes.trim()}` : ''
+    contact.interactions.push({ id: randomUUID(), at, kind: 'task', note: `Completed: ${task.title}${result}` })
+    contact.lastContactedAt = at
+    contact.updatedAt = at
   }
 
   deleteTask(id: string): boolean {

@@ -5,20 +5,28 @@ import {
   type ContactPatch,
   type ContactStage,
   type InteractionKind,
+  type Task,
   type Workspace
 } from '@shared/types'
 import { ContactBriefModal } from './ContactBriefModal'
 
 interface Props {
   contacts: Contact[]
+  tasks: Task[]
   workspaces: Workspace[]
   workspaceById: Map<string, Workspace>
   onChanged: () => Promise<void>
 }
 
 /** Address book + lightweight CRM: searchable contact list with an editable
- *  detail panel and a per-contact interaction log. */
-export function Contacts({ contacts, workspaces, workspaceById, onChanged }: Props): JSX.Element {
+ *  detail panel, linked tasks, and a per-contact interaction log. */
+export function Contacts({
+  contacts,
+  tasks,
+  workspaces,
+  workspaceById,
+  onChanged
+}: Props): JSX.Element {
   const [selectedId, setSelectedId] = useState<string | null>(contacts[0]?.id ?? null)
   const [search, setSearch] = useState('')
   const [onlyFollowUps, setOnlyFollowUps] = useState(false)
@@ -31,7 +39,11 @@ export function Contacts({ contacts, workspaces, workspaceById, onChanged }: Pro
   }, [toast])
 
   const today = todayKey()
-  const isOverdue = (c: Contact): boolean => !!c.followUpAt && c.followUpAt <= today
+  // A contact "needs follow-up" if it has an open task that's due/overdue.
+  const isOverdue = (c: Contact): boolean =>
+    tasks.some(
+      (t) => t.contactId === c.id && t.status !== 'done' && !!t.dueDate && t.dueDate <= today
+    )
   const overdueCount = contacts.filter(isOverdue).length
 
   const filtered = useMemo(() => {
@@ -125,6 +137,7 @@ export function Contacts({ contacts, workspaces, workspaceById, onChanged }: Pro
           <ContactDetail
             key={selected.id}
             contact={selected}
+            tasks={tasks.filter((t) => t.contactId === selected.id)}
             workspaces={workspaces}
             onChanged={onChanged}
             onToast={setToast}
@@ -145,12 +158,14 @@ export function Contacts({ contacts, workspaces, workspaceById, onChanged }: Pro
 
 function ContactDetail({
   contact,
+  tasks,
   workspaces,
   onChanged,
   onToast,
   onDeleted
 }: {
   contact: Contact
+  tasks: Task[]
   workspaces: Workspace[]
   onChanged: () => Promise<void>
   onToast: (msg: string) => void
@@ -164,22 +179,50 @@ function ContactDetail({
   const [title, setTitle] = useState(contact.title)
   const [notes, setNotes] = useState(contact.notes)
   const [tagsText, setTagsText] = useState(contact.tags.join(', '))
-  const [followUp, setFollowUp] = useState(contact.followUpAt ?? '')
   const [logKind, setLogKind] = useState<InteractionKind>('note')
   const [logNote, setLogNote] = useState('')
+  const [taskTitle, setTaskTitle] = useState('')
+  const [taskDue, setTaskDue] = useState('')
 
   const save = async (patch: ContactPatch): Promise<void> => {
     await window.api.updateContact(contact.id, patch)
     await onChanged()
   }
 
-  // Follow-up date drives a synced task (which then appears on the calendar).
-  const saveFollowUp = async (value: string): Promise<void> => {
-    setFollowUp(value)
-    await window.api.setContactFollowUp(contact.id, value || null)
+  const addTask = async (): Promise<void> => {
+    if (!taskTitle.trim()) return
+    await window.api.createTask({
+      title: taskTitle.trim(),
+      workspaceId: contact.workspaceId,
+      contactId: contact.id,
+      dueDate: taskDue || null,
+      status: 'todo',
+      priority: 'medium'
+    })
+    setTaskTitle('')
+    setTaskDue('')
     await onChanged()
-    onToast(value ? 'Follow-up task added to your board & calendar ✓' : 'Follow-up cleared')
+    onToast(taskDue ? 'Task added to board & calendar ✓' : 'Task added ✓')
   }
+
+  const completeTask = async (id: string): Promise<void> => {
+    await window.api.updateTask(id, { status: 'done' })
+    await onChanged()
+    onToast('Task completed — logged to this contact ✓')
+  }
+
+  const reopenTask = async (id: string): Promise<void> => {
+    await window.api.updateTask(id, { status: 'todo' })
+    await onChanged()
+  }
+
+  const today = todayKey()
+  const openTasks = tasks
+    .filter((t) => t.status !== 'done')
+    .sort((a, b) => (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999'))
+  const doneTasks = tasks
+    .filter((t) => t.status === 'done')
+    .sort((a, b) => (b.completedAt ?? '').localeCompare(a.completedAt ?? ''))
 
   const addLog = async (): Promise<void> => {
     if (!logNote.trim()) return
@@ -263,14 +306,6 @@ function ContactDetail({
           </label>
         </div>
 
-        <div className="field-row">
-          <label className="field">
-            <span>Follow-up date</span>
-            <input type="date" value={followUp} onChange={(e) => saveFollowUp(e.target.value)} />
-          </label>
-          <span />
-        </div>
-
         <label className="field">
           <span>Tags (comma-separated)</span>
           <input
@@ -297,6 +332,58 @@ function ContactDetail({
           <div className="crm-brief-text">{contact.briefing.text}</div>
         </div>
       )}
+
+      <div className="crm-tasks-section">
+        <div className="crm-log-head">Tasks</div>
+        <div className="crm-task-add">
+          <input
+            className="crm-log-input"
+            placeholder="New task for this contact…"
+            value={taskTitle}
+            onChange={(e) => setTaskTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') void addTask()
+            }}
+          />
+          <input type="date" value={taskDue} title="Due date (optional)" onChange={(e) => setTaskDue(e.target.value)} />
+          <button className="btn btn-sm" onClick={addTask} disabled={!taskTitle.trim()}>
+            Add
+          </button>
+        </div>
+
+        {openTasks.length === 0 && doneTasks.length === 0 ? (
+          <div className="crm-empty">No tasks yet — add deliverables and follow-ups here.</div>
+        ) : (
+          <ul className="crm-task-list">
+            {openTasks.map((t) => (
+              <li key={t.id} className="crm-task-item">
+                <button className="check" title="Mark done" onClick={() => completeTask(t.id)}>
+                  ✓
+                </button>
+                <div className="crm-task-main">
+                  <div className="crm-task-title">{t.title}</div>
+                  {t.dueDate && (
+                    <div className={`crm-task-due muted ${t.dueDate <= today ? 'overdue' : ''}`}>
+                      📆 {t.dueDate}
+                      {t.dueTime ? ` ${t.dueTime}` : ''}
+                    </div>
+                  )}
+                </div>
+              </li>
+            ))}
+            {doneTasks.slice(0, 5).map((t) => (
+              <li key={t.id} className="crm-task-item done">
+                <button className="check checked" title="Reopen" onClick={() => reopenTask(t.id)}>
+                  ✓
+                </button>
+                <div className="crm-task-main">
+                  <div className="crm-task-title done">{t.title}</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       <div className="crm-log-section">
         <div className="crm-log-head">Interaction log</div>
@@ -354,7 +441,8 @@ const KIND_ICON: Record<InteractionKind, string> = {
   note: '📝',
   call: '📞',
   email: '✉️',
-  meeting: '🤝'
+  meeting: '🤝',
+  task: '✅'
 }
 
 function formatWhen(iso: string): string {
