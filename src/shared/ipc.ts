@@ -46,6 +46,9 @@ export const IPC = {
   // News briefing
   generateBriefing: 'briefing:generate',
   updateBriefingSettings: 'briefing:settings',
+  // Automation (email→task follow-up scan)
+  updateAutomation: 'automation:settings',
+  scanFollowUpsNow: 'automation:scanNow',
   // Contacts / CRM
   createContact: 'contact:create',
   updateContact: 'contact:update',

@@ -6,6 +6,8 @@ import { CONTACT_STAGES } from '@shared/types'
 import type {
   Account,
   AppData,
+  AutomationPatch,
+  AutomationState,
   BriefingSettingsPatch,
   BriefingState,
   CaptureContactInput,
@@ -80,6 +82,7 @@ class Store {
     data.dismissedEmails ??= []
     data.folders ??= []
     data.briefing ??= { autoDaily: false, time: '07:00', last: null, lastRunDate: null }
+    data.automation ??= { followUpScan: false, scannedEmailIds: [], lastFollowUpSlot: null }
     data.contacts ??= []
     // Map the old sales "stage" values onto the new relationship set.
     const stageMap: Record<string, Contact['stage']> = {
@@ -116,7 +119,8 @@ class Store {
       dismissedEmails: [],
       folders: [],
       contacts: [],
-      briefing: { autoDaily: false, time: '07:00', last: null, lastRunDate: null }
+      briefing: { autoDaily: false, time: '07:00', last: null, lastRunDate: null },
+      automation: { followUpScan: false, scannedEmailIds: [], lastFollowUpSlot: null }
     }
     this.data = seeded
     this.persist()
@@ -534,6 +538,27 @@ class Store {
   /** Records that today's automatic run has happened (fire once per day). */
   markBriefingRun(dateKey: string): void {
     this.data.briefing.lastRunDate = dateKey
+    this.persist()
+  }
+
+  // --- Automation (email→task follow-up scan) -----------------------------
+
+  updateAutomation(patch: AutomationPatch): AutomationState {
+    if (patch.followUpScan !== undefined) this.data.automation.followUpScan = patch.followUpScan
+    this.persist()
+    return this.data.automation
+  }
+
+  /** Marks the AM/PM slot as run so the scan fires once per slot. */
+  setFollowUpSlot(slot: string): void {
+    this.data.automation.lastFollowUpSlot = slot
+    this.persist()
+  }
+
+  /** Remembers which messages were analyzed (deduped, bounded to recent 600). */
+  recordFollowUpScan(ids: string[]): void {
+    const merged = [...this.data.automation.scannedEmailIds, ...ids]
+    this.data.automation.scannedEmailIds = Array.from(new Set(merged)).slice(-600)
     this.persist()
   }
 

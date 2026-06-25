@@ -24,8 +24,10 @@ import {
 } from './google/gmail'
 import { listCalendarEvents, attachEventBrief, createEvent } from './google/calendar'
 import { buildNewsBriefing } from './briefing'
+import { scanFollowUps } from './followups'
 import type {
   Account,
+  AutomationPatch,
   BriefingSettingsPatch,
   CaptureContactInput,
   ContactBriefInput,
@@ -139,6 +141,8 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.updateBriefingSettings, (_e, patch: BriefingSettingsPatch) =>
     store.updateBriefingSettings(patch)
   )
+  ipcMain.handle(IPC.updateAutomation, (_e, patch: AutomationPatch) => store.updateAutomation(patch))
+  ipcMain.handle(IPC.scanFollowUpsNow, () => scanFollowUps())
   ipcMain.handle(
     IPC.attachEventBrief,
     (_e, accountId: string, calendarId: string, eventId: string, brief: string) =>

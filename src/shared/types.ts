@@ -450,6 +450,16 @@ export interface BriefingState {
 
 export type BriefingSettingsPatch = Partial<Pick<BriefingState, 'autoDaily' | 'time'>>
 
+/** Settings for the automatic email→task follow-up scan (runs 6am & 6pm). */
+export interface AutomationState {
+  followUpScan: boolean
+  /** Message ids already analyzed, so they aren't re-processed (bounded). */
+  scannedEmailIds: string[]
+  /** Last slot run, e.g. "2026-06-25-AM", so it fires once per slot. */
+  lastFollowUpSlot: string | null
+}
+export type AutomationPatch = Partial<Pick<AutomationState, 'followUpScan'>>
+
 /** Full persisted application state. */
 export interface AppData {
   version: number
@@ -464,6 +474,8 @@ export interface AppData {
   contacts: Contact[]
   /** Daily news-briefing settings + the cached latest briefing. */
   briefing: BriefingState
+  /** Automatic email→task follow-up scan settings. */
+  automation: AutomationState
 }
 
 /** Payload shapes for creating/updating tasks from the renderer. */

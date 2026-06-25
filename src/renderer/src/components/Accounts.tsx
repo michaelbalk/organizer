@@ -1,13 +1,40 @@
 import { useEffect, useState } from 'react'
-import type { Account, Workspace } from '@shared/types'
+import type { Account, AutomationState, Workspace } from '@shared/types'
 
 interface Props {
   accounts: Account[]
   workspaces: Workspace[]
+  automation: AutomationState
   onChanged: () => Promise<void>
 }
 
-export function Accounts({ accounts, workspaces, onChanged }: Props): JSX.Element {
+export function Accounts({ accounts, workspaces, automation, onChanged }: Props): JSX.Element {
+  const [scanning, setScanning] = useState(false)
+  const [scanMsg, setScanMsg] = useState<string | null>(null)
+
+  const toggleFollowUp = async (enabled: boolean): Promise<void> => {
+    await window.api.updateAutomation({ followUpScan: enabled })
+    await onChanged()
+  }
+
+  const scanNow = async (): Promise<void> => {
+    setScanMsg(null)
+    setScanning(true)
+    try {
+      const { created, scanned } = await window.api.scanFollowUpsNow()
+      setScanMsg(
+        created > 0
+          ? `Created ${created} follow-up task${created === 1 ? '' : 's'} from ${scanned} new email${scanned === 1 ? '' : 's'}.`
+          : `No follow-ups found in ${scanned} new email${scanned === 1 ? '' : 's'}.`
+      )
+      await onChanged()
+    } catch (e) {
+      setScanMsg(e instanceof Error ? e.message : 'Scan failed.')
+    } finally {
+      setScanning(false)
+    }
+  }
+
   const [configured, setConfigured] = useState<boolean | null>(null)
   const [connecting, setConnecting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -147,6 +174,31 @@ export function Accounts({ accounts, workspaces, onChanged }: Props): JSX.Elemen
           ))}
         </ul>
       )}
+
+      <div className="accounts-head" style={{ marginTop: 8 }}>
+        <h2>Automation</h2>
+        <p className="muted">
+          Let Claude scan your inbox twice a day (≈6am &amp; 6pm) and turn emails that need a
+          response into tasks — each titled by sender &amp; what&apos;s required, with a link to the
+          email and its attachments listed.
+        </p>
+      </div>
+      <div className="account-card" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 12 }}>
+        <label className="brief-toggle">
+          <input
+            type="checkbox"
+            checked={automation.followUpScan}
+            onChange={(e) => toggleFollowUp(e.target.checked)}
+          />
+          <span>Scan email for follow-ups at 6am &amp; 6pm</span>
+        </label>
+        <div className="account-actions">
+          <button className="btn btn-ghost btn-sm" onClick={scanNow} disabled={scanning}>
+            {scanning ? 'Scanning…' : 'Scan now'}
+          </button>
+          {scanMsg && <span className="muted">{scanMsg}</span>}
+        </div>
+      </div>
     </div>
   )
 }

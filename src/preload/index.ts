@@ -18,6 +18,8 @@ import type {
   EmailFull,
   GmailLabel,
   InboxResult,
+  AutomationPatch,
+  AutomationState,
   BriefingSettingsPatch,
   BriefingState,
   MailActionKind,
@@ -138,6 +140,18 @@ const api = {
     ipcRenderer.invoke(IPC.generateBriefing, hours),
   updateBriefingSettings: (patch: BriefingSettingsPatch): Promise<BriefingState> =>
     ipcRenderer.invoke(IPC.updateBriefingSettings, patch),
+
+  // Automation (email→task follow-up scan)
+  updateAutomation: (patch: AutomationPatch): Promise<AutomationState> =>
+    ipcRenderer.invoke(IPC.updateAutomation, patch),
+  scanFollowUpsNow: (): Promise<{ created: number; scanned: number }> =>
+    ipcRenderer.invoke(IPC.scanFollowUpsNow),
+  /** Fires when the user clicks the "follow-up tasks created" notification. */
+  onOpenBoard: (cb: () => void): (() => void) => {
+    const listener = (): void => cb()
+    ipcRenderer.on('open-board', listener)
+    return () => ipcRenderer.removeListener('open-board', listener)
+  },
   /** Fires when the user clicks the "briefing ready" desktop notification. */
   onOpenBriefing: (cb: () => void): (() => void) => {
     const listener = (): void => cb()

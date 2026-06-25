@@ -36,7 +36,8 @@ const EMPTY: AppData = {
   dismissedEmails: [],
   folders: [],
   contacts: [],
-  briefing: { autoDaily: false, time: '07:00', last: null, lastRunDate: null }
+  briefing: { autoDaily: false, time: '07:00', last: null, lastRunDate: null },
+  automation: { followUpScan: false, scannedEmailIds: [], lastFollowUpSlot: null }
 }
 
 export default function App(): JSX.Element {
@@ -73,6 +74,15 @@ export default function App(): JSX.Element {
   useEffect(() => {
     const unsub = window.api.onOpenBriefing(() => {
       setView('briefing')
+      void refresh()
+    })
+    return unsub
+  }, [refresh])
+
+  // Jump to the board when the user clicks the follow-up-tasks notification.
+  useEffect(() => {
+    const unsub = window.api.onOpenBoard(() => {
+      setView('board')
       void refresh()
     })
     return unsub
@@ -251,6 +261,7 @@ export default function App(): JSX.Element {
             <Accounts
               accounts={data.accounts}
               workspaces={data.workspaces}
+              automation={data.automation}
               onChanged={refresh}
             />
           )}

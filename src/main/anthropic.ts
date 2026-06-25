@@ -239,14 +239,81 @@ export async function generateNewsBriefing(material: string): Promise<{ topics: 
   if (!text) throw new Error('Claude returned an empty briefing.')
 
   // Extract the JSON object defensively (in case the model adds any stray text).
+  return parseJsonObject<{ topics: BriefingTopic[] }>(text, 'briefing', { topics: [] })
+}
+
+export interface FollowUpEmail {
+  index: number
+  from: string
+  subject: string
+  body: string
+}
+export interface FollowUpResult {
+  index: number
+  taskTitle: string
+}
+
+/**
+ * Triages emails and returns those that need the user to follow up / act, each
+ * with a concise task title ("<Sender>: <what's required>"). Cheap model.
+ */
+export async function detectFollowUps(emails: FollowUpEmail[]): Promise<FollowUpResult[]> {
+  const cfg = getAnthropicConfig()
+  if (!cfg) throw new Error('Claude is not configured. Add ANTHROPIC_API_KEY to your .env file.')
+  if (emails.length === 0) return []
+
+  const system = [
+    "You are an executive assistant triaging the user's inbox.",
+    'Identify ONLY emails that genuinely require the user to follow up or take an action — a reply is needed, a request was made of them, there is a deadline or a task to do.',
+    'IGNORE newsletters, promotions/marketing, automated notifications, receipts, calendar invites, and pure FYI messages.',
+    'For each that needs follow-up, write a concise task title of the form "<Sender or company>: <what is required>" (max ~80 chars, imperative where natural).',
+    'Output ONLY a JSON object (no markdown, no prose) of this shape, using the provided index numbers:',
+    '{"followUps":[{"index":0,"taskTitle":"..."}]}',
+    'If none require follow-up, output {"followUps":[]}.'
+  ].join('\n')
+
+  const material = emails
+    .map((e) => `[${e.index}] From: ${e.from} | Subject: ${e.subject}\n${e.body}`)
+    .join('\n\n')
+
+  const model = process.env.ANTHROPIC_BRIEFING_MODEL?.trim() || BRIEFING_MODEL
+
+  let res: Response
+  try {
+    res = await fetch(MESSAGES_URL, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': cfg.apiKey,
+        'anthropic-version': ANTHROPIC_VERSION
+      },
+      body: JSON.stringify({ model, max_tokens: 2000, system, messages: [{ role: 'user', content: material }] })
+    })
+  } catch (err) {
+    throw new Error(`Could not reach Claude: ${err instanceof Error ? err.message : String(err)}`)
+  }
+
+  const data = (await res.json().catch(() => ({}))) as MessagesResponse
+  if (!res.ok) {
+    throw new Error(`Claude API error ${res.status}${data.error?.message ? `: ${data.error.message}` : ''}`)
+  }
+  const text = (data.content ?? [])
+    .filter((b) => b.type === 'text' && b.text)
+    .map((b) => b.text)
+    .join('')
+    .trim()
+  if (!text) return []
+  return parseJsonObject<{ followUps: FollowUpResult[] }>(text, 'follow-ups', { followUps: [] }).followUps
+}
+
+/** Extracts the first {...} JSON object from model output, with a fallback. */
+function parseJsonObject<T>(text: string, label: string, fallback: T): T {
   const start = text.indexOf('{')
   const end = text.lastIndexOf('}')
-  if (start === -1 || end === -1) throw new Error('Claude returned an unreadable briefing.')
-  let parsed: { topics?: BriefingTopic[] }
+  if (start === -1 || end === -1) throw new Error(`Claude returned an unreadable ${label} response.`)
   try {
-    parsed = JSON.parse(text.slice(start, end + 1))
+    return { ...fallback, ...JSON.parse(text.slice(start, end + 1)) }
   } catch {
-    throw new Error('Claude returned an unparseable briefing.')
+    throw new Error(`Claude returned an unparseable ${label} response.`)
   }
-  return { topics: parsed.topics ?? [] }
 }

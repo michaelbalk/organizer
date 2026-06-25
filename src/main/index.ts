@@ -2,6 +2,7 @@ import { app, shell, BrowserWindow, Notification } from 'electron'
 import { join } from 'path'
 import { registerIpc } from './ipc'
 import { startBriefingScheduler } from './briefing'
+import { startFollowUpScheduler } from './followups'
 import { startReminders } from './reminders'
 
 function createWindow(): void {
@@ -58,6 +59,20 @@ app.whenReady().then(() => {
       if (win.isMinimized()) win.restore()
       win.focus()
       win.webContents.send('open-briefing')
+    })
+    n.show()
+  })
+  startFollowUpScheduler((count) => {
+    const n = new Notification({
+      title: 'Follow-up tasks created',
+      body: `${count} email${count === 1 ? '' : 's'} need follow-up — added to your board`
+    })
+    n.on('click', () => {
+      const win = BrowserWindow.getAllWindows()[0]
+      if (!win) return
+      if (win.isMinimized()) win.restore()
+      win.focus()
+      win.webContents.send('open-board')
     })
     n.show()
   })
