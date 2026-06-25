@@ -18,6 +18,8 @@ import type {
   EmailFull,
   GmailLabel,
   InboxResult,
+  BriefingSettingsPatch,
+  BriefingState,
   MailActionKind,
   NewsBriefing,
   NewTaskInput,
@@ -133,7 +135,15 @@ const api = {
 
   // News briefing
   generateBriefing: (hours?: number): Promise<NewsBriefing> =>
-    ipcRenderer.invoke(IPC.generateBriefing, hours)
+    ipcRenderer.invoke(IPC.generateBriefing, hours),
+  updateBriefingSettings: (patch: BriefingSettingsPatch): Promise<BriefingState> =>
+    ipcRenderer.invoke(IPC.updateBriefingSettings, patch),
+  /** Fires when the user clicks the "briefing ready" desktop notification. */
+  onOpenBriefing: (cb: () => void): (() => void) => {
+    const listener = (): void => cb()
+    ipcRenderer.on('open-briefing', listener)
+    return () => ipcRenderer.removeListener('open-briefing', listener)
+  }
 }
 
 export type OrganizerApi = typeof api

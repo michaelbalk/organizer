@@ -66,11 +66,45 @@ export async function buildNewsBriefing(hours = 48): Promise<NewsBriefing> {
   const material = buildMaterial(emails, sources)
   const { topics } = await generateNewsBriefing(material)
 
-  return {
+  const briefing: NewsBriefing = {
     topics,
     generatedAt: new Date().toISOString(),
     emailCount: emails.length,
     sourceCount: sources.length
+  }
+  getStore().setLastBriefing(briefing) // cache for instant view + the daily run
+  return briefing
+}
+
+// --- Daily auto-generation scheduler --------------------------------------
+
+let scheduleTimer: ReturnType<typeof setInterval> | null = null
+
+/** Starts a 60s tick that auto-generates a briefing once per day at the set time. */
+export function startBriefingScheduler(onReady: (b: NewsBriefing) => void): void {
+  if (scheduleTimer) return
+  scheduleTimer = setInterval(() => void checkDaily(onReady), 60_000)
+}
+
+async function checkDaily(onReady: (b: NewsBriefing) => void): Promise<void> {
+  const state = getStore().getData().briefing
+  if (!state.autoDaily) return
+
+  const now = new Date()
+  const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  if (state.lastRunDate === todayKey) return // already ran today
+
+  const [h, m] = state.time.split(':').map(Number)
+  const due = now.getHours() > h || (now.getHours() === h && now.getMinutes() >= m)
+  if (!due) return
+
+  // Mark first so a slow build (>60s) can't trigger a second run.
+  getStore().markBriefingRun(todayKey)
+  try {
+    const briefing = await buildNewsBriefing(48)
+    onReady(briefing)
+  } catch (err) {
+    console.error('[briefing] daily run failed:', err)
   }
 }
 

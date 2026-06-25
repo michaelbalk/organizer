@@ -6,11 +6,14 @@ import { CONTACT_STAGES } from '@shared/types'
 import type {
   Account,
   AppData,
+  BriefingSettingsPatch,
+  BriefingState,
   CaptureContactInput,
   CaptureContactResult,
   Contact,
   ContactPatch,
   FolderMeta,
+  NewsBriefing,
   NewAccountInput,
   NewContactInput,
   NewInteractionInput,
@@ -76,6 +79,7 @@ class Store {
     }))
     data.dismissedEmails ??= []
     data.folders ??= []
+    data.briefing ??= { autoDaily: false, time: '07:00', last: null, lastRunDate: null }
     data.contacts ??= []
     // Map the old sales "stage" values onto the new relationship set.
     const stageMap: Record<string, Contact['stage']> = {
@@ -111,7 +115,8 @@ class Store {
       tasks: [],
       dismissedEmails: [],
       folders: [],
-      contacts: []
+      contacts: [],
+      briefing: { autoDaily: false, time: '07:00', last: null, lastRunDate: null }
     }
     this.data = seeded
     this.persist()
@@ -510,6 +515,26 @@ class Store {
     contact.updatedAt = new Date().toISOString()
     this.persist()
     return contact
+  }
+
+  // --- News briefing ------------------------------------------------------
+
+  updateBriefingSettings(patch: BriefingSettingsPatch): BriefingState {
+    if (patch.autoDaily !== undefined) this.data.briefing.autoDaily = patch.autoDaily
+    if (patch.time) this.data.briefing.time = patch.time
+    this.persist()
+    return this.data.briefing
+  }
+
+  setLastBriefing(briefing: NewsBriefing): void {
+    this.data.briefing.last = briefing
+    this.persist()
+  }
+
+  /** Records that today's automatic run has happened (fire once per day). */
+  markBriefingRun(dateKey: string): void {
+    this.data.briefing.lastRunDate = dateKey
+    this.persist()
   }
 
   /**

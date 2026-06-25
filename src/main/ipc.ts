@@ -26,6 +26,7 @@ import { listCalendarEvents, attachEventBrief, createEvent } from './google/cale
 import { buildNewsBriefing } from './briefing'
 import type {
   Account,
+  BriefingSettingsPatch,
   CaptureContactInput,
   ContactBriefInput,
   ContactPatch,
@@ -135,6 +136,9 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.listCalendar, (_e, daysAhead?: number) => listCalendarEvents(daysAhead))
   ipcMain.handle(IPC.createEvent, (_e, input: CreateEventInput) => createEvent(input))
   ipcMain.handle(IPC.generateBriefing, (_e, hours?: number) => buildNewsBriefing(hours))
+  ipcMain.handle(IPC.updateBriefingSettings, (_e, patch: BriefingSettingsPatch) =>
+    store.updateBriefingSettings(patch)
+  )
   ipcMain.handle(
     IPC.attachEventBrief,
     (_e, accountId: string, calendarId: string, eventId: string, brief: string) =>

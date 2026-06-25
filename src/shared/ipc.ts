@@ -45,6 +45,7 @@ export const IPC = {
   createEvent: 'calendar:createEvent',
   // News briefing
   generateBriefing: 'briefing:generate',
+  updateBriefingSettings: 'briefing:settings',
   // Contacts / CRM
   createContact: 'contact:create',
   updateContact: 'contact:update',

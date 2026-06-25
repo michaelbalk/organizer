@@ -35,7 +35,8 @@ const EMPTY: AppData = {
   tasks: [],
   dismissedEmails: [],
   folders: [],
-  contacts: []
+  contacts: [],
+  briefing: { autoDaily: false, time: '07:00', last: null, lastRunDate: null }
 }
 
 export default function App(): JSX.Element {
@@ -66,6 +67,15 @@ export default function App(): JSX.Element {
 
   useEffect(() => {
     refresh().finally(() => setLoading(false))
+  }, [refresh])
+
+  // Jump to the Briefing view when the user clicks the morning-briefing notification.
+  useEffect(() => {
+    const unsub = window.api.onOpenBriefing(() => {
+      setView('briefing')
+      void refresh()
+    })
+    return unsub
   }, [refresh])
 
   const workspaceById = useMemo(() => {
@@ -230,7 +240,12 @@ export default function App(): JSX.Element {
             />
           )}
           {view === 'briefing' && (
-            <Briefing accounts={data.accounts} onGoToSettings={() => setView('settings')} />
+            <Briefing
+              accounts={data.accounts}
+              state={data.briefing}
+              onChanged={refresh}
+              onGoToSettings={() => setView('settings')}
+            />
           )}
           {view === 'settings' && (
             <Accounts

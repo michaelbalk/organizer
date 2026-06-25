@@ -1761,6 +1761,34 @@ input[type='color'].folder-card-color {
   flex-direction: column;
   gap: 14px;
 }
+.brief-schedule {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 13px;
+}
+.brief-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+}
+.brief-time {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 4px 8px;
+  border-radius: 7px;
+  font-family: inherit;
+}
+.brief-time:disabled {
+  opacity: 0.5;
+}
 .brief-topic {
   display: flex;
   flex-direction: column;

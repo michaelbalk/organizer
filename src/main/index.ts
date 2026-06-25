@@ -1,6 +1,7 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, BrowserWindow, Notification } from 'electron'
 import { join } from 'path'
 import { registerIpc } from './ipc'
+import { startBriefingScheduler } from './briefing'
 import { startReminders } from './reminders'
 
 function createWindow(): void {
@@ -46,6 +47,20 @@ app.whenReady().then(() => {
   registerIpc()
   createWindow()
   startReminders()
+  startBriefingScheduler((b) => {
+    const n = new Notification({
+      title: 'Morning briefing ready',
+      body: `${b.topics.length} topic${b.topics.length === 1 ? '' : 's'} from ${b.emailCount} emails`
+    })
+    n.on('click', () => {
+      const win = BrowserWindow.getAllWindows()[0]
+      if (!win) return
+      if (win.isMinimized()) win.restore()
+      win.focus()
+      win.webContents.send('open-briefing')
+    })
+    n.show()
+  })
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

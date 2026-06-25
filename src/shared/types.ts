@@ -437,6 +437,19 @@ export interface NewsBriefing {
   sourceCount: number
 }
 
+export interface BriefingState {
+  /** Auto-generate a briefing once each morning. */
+  autoDaily: boolean
+  /** Local time (HH:mm, 24h) for the daily run. */
+  time: string
+  /** The most recent briefing (manual or automatic), cached for instant view. */
+  last: NewsBriefing | null
+  /** YYYY-MM-DD of the last automatic run, so it fires once per day. */
+  lastRunDate: string | null
+}
+
+export type BriefingSettingsPatch = Partial<Pick<BriefingState, 'autoDaily' | 'time'>>
+
 /** Full persisted application state. */
 export interface AppData {
   version: number
@@ -449,6 +462,8 @@ export interface AppData {
   folders: FolderMeta[]
   /** Address book / CRM contacts. */
   contacts: Contact[]
+  /** Daily news-briefing settings + the cached latest briefing. */
+  briefing: BriefingState
 }
 
 /** Payload shapes for creating/updating tasks from the renderer. */
