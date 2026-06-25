@@ -19,6 +19,7 @@ import type {
   GmailLabel,
   InboxResult,
   MailActionKind,
+  NewsBriefing,
   NewTaskInput,
   NewWorkspaceInput,
   SendEmailInput,
@@ -128,7 +129,11 @@ const api = {
   setContactBriefing: (id: string, text: string): Promise<Contact | null> =>
     ipcRenderer.invoke(IPC.setContactBriefing, id, text),
   setContactFollowUp: (contactId: string, date: string | null): Promise<Contact | null> =>
-    ipcRenderer.invoke(IPC.setContactFollowUp, contactId, date)
+    ipcRenderer.invoke(IPC.setContactFollowUp, contactId, date),
+
+  // News briefing
+  generateBriefing: (hours?: number): Promise<NewsBriefing> =>
+    ipcRenderer.invoke(IPC.generateBriefing, hours)
 }
 
 export type OrganizerApi = typeof api

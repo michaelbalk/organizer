@@ -7,11 +7,20 @@ import { WorkspaceModal } from './components/WorkspaceModal'
 import { Accounts } from './components/Accounts'
 import { Inbox } from './components/Inbox'
 import { Calendar } from './components/Calendar'
+import { Briefing } from './components/Briefing'
 import { Today } from './components/Today'
 import { Folders } from './components/Folders'
 import { Contacts } from './components/Contacts'
 
-export type View = 'today' | 'board' | 'email' | 'folders' | 'calendar' | 'contacts' | 'settings'
+export type View =
+  | 'today'
+  | 'board'
+  | 'email'
+  | 'folders'
+  | 'calendar'
+  | 'contacts'
+  | 'briefing'
+  | 'settings'
 
 /** Sidebar selection: all tasks, a kind group, or a single workspace. */
 export type Selection =
@@ -86,6 +95,7 @@ export default function App(): JSX.Element {
     if (view === 'folders') return 'Folders'
     if (view === 'calendar') return 'Calendar'
     if (view === 'contacts') return 'Contacts'
+    if (view === 'briefing') return 'Briefing'
     if (view === 'settings') return 'Settings'
     if (selection.type === 'all') return 'All Tasks'
     if (selection.type === 'kind')
@@ -133,7 +143,11 @@ export default function App(): JSX.Element {
                       ? 'Create, organize & annotate your folders'
                       : view === 'calendar'
                         ? 'Combined calendar'
-                        : 'Accounts & settings'}
+                        : view === 'contacts'
+                          ? 'Address book & CRM'
+                          : view === 'briefing'
+                            ? 'Your newsletters, summarized'
+                            : 'Accounts & settings'}
             </span>
           </div>
 
@@ -214,6 +228,9 @@ export default function App(): JSX.Element {
               workspaceById={workspaceById}
               onChanged={refresh}
             />
+          )}
+          {view === 'briefing' && (
+            <Briefing accounts={data.accounts} onGoToSettings={() => setView('settings')} />
           )}
           {view === 'settings' && (
             <Accounts

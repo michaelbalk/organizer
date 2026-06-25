@@ -43,6 +43,8 @@ export const IPC = {
   // Calendar
   listCalendar: 'calendar:list',
   createEvent: 'calendar:createEvent',
+  // News briefing
+  generateBriefing: 'briefing:generate',
   // Contacts / CRM
   createContact: 'contact:create',
   updateContact: 'contact:update',

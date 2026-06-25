@@ -1,9 +1,16 @@
-import type { ContactBriefInput, DraftReplyInput, MeetingBriefInput } from '@shared/types'
+import type {
+  BriefingTopic,
+  ContactBriefInput,
+  DraftReplyInput,
+  MeetingBriefInput
+} from '@shared/types'
 import { getAnthropicConfig, type AnthropicConfig } from './config'
 
 const MESSAGES_URL = 'https://api.anthropic.com/v1/messages'
 const ANTHROPIC_VERSION = '2023-06-01'
 const MAX_BODY_CHARS = 6000
+// News summarization is high-volume; default to the cheap model (override with env).
+const BRIEFING_MODEL = 'claude-haiku-4-5'
 
 interface ContentBlock {
   type: string
@@ -177,4 +184,69 @@ async function callClaude(cfg: AnthropicConfig, system: string, userText: string
     .trim()
   if (!text) throw new Error('Claude returned an empty draft.')
   return text
+}
+
+/**
+ * Summarizes newsletter material + fetched article excerpts into a multi-topic
+ * briefing with citations. Uses the cheap model by default (news is high-volume).
+ */
+export async function generateNewsBriefing(material: string): Promise<{ topics: BriefingTopic[] }> {
+  const cfg = getAnthropicConfig()
+  if (!cfg) throw new Error('Claude is not configured. Add ANTHROPIC_API_KEY to your .env file.')
+
+  const system = [
+    "You are a news editor. From the user's recent newsletter emails and the linked article excerpts below, produce a concise multi-topic news briefing.",
+    'Rules:',
+    '- Group related stories into 3–8 topics, each with a short topic title.',
+    '- For each item write a neutral 1–3 sentence summary.',
+    '- Cite a real source for every item: use the exact URL and a short title taken from the provided material. NEVER invent a URL — only use URLs that appear in the material.',
+    '- Skip pure ads/marketing/promotions; focus on news and substantive information.',
+    '- Output ONLY a JSON object (no markdown fences, no prose) with exactly this shape:',
+    '{"topics":[{"title":"...","items":[{"summary":"...","sourceTitle":"...","sourceUrl":"https://..."}]}]}'
+  ].join('\n')
+
+  const model = process.env.ANTHROPIC_BRIEFING_MODEL?.trim() || BRIEFING_MODEL
+
+  let res: Response
+  try {
+    res = await fetch(MESSAGES_URL, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': cfg.apiKey,
+        'anthropic-version': ANTHROPIC_VERSION
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 3500,
+        system,
+        messages: [{ role: 'user', content: material }]
+      })
+    })
+  } catch (err) {
+    throw new Error(`Could not reach Claude: ${err instanceof Error ? err.message : String(err)}`)
+  }
+
+  const data = (await res.json().catch(() => ({}))) as MessagesResponse
+  if (!res.ok) {
+    throw new Error(`Claude API error ${res.status}${data.error?.message ? `: ${data.error.message}` : ''}`)
+  }
+  const text = (data.content ?? [])
+    .filter((b) => b.type === 'text' && b.text)
+    .map((b) => b.text)
+    .join('')
+    .trim()
+  if (!text) throw new Error('Claude returned an empty briefing.')
+
+  // Extract the JSON object defensively (in case the model adds any stray text).
+  const start = text.indexOf('{')
+  const end = text.lastIndexOf('}')
+  if (start === -1 || end === -1) throw new Error('Claude returned an unreadable briefing.')
+  let parsed: { topics?: BriefingTopic[] }
+  try {
+    parsed = JSON.parse(text.slice(start, end + 1))
+  } catch {
+    throw new Error('Claude returned an unparseable briefing.')
+  }
+  return { topics: parsed.topics ?? [] }
 }

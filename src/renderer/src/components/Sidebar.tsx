@@ -73,6 +73,12 @@ export function Sidebar({
           <span>👥</span> Contacts
         </button>
         <button
+          className={`nav-view ${view === 'briefing' ? 'active' : ''}`}
+          onClick={() => onViewChange('briefing')}
+        >
+          <span>📰</span> Briefing
+        </button>
+        <button
           className={`nav-view ${view === 'settings' ? 'active' : ''}`}
           onClick={() => onViewChange('settings')}
         >

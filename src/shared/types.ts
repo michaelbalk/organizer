@@ -418,6 +418,25 @@ export interface CaptureContactResult {
   contactId: string
 }
 
+// --- News briefing --------------------------------------------------------
+
+export interface BriefingItem {
+  summary: string
+  sourceTitle: string
+  /** Resolved link to the original article (opens in the browser). */
+  sourceUrl: string
+}
+export interface BriefingTopic {
+  title: string
+  items: BriefingItem[]
+}
+export interface NewsBriefing {
+  topics: BriefingTopic[]
+  generatedAt: string
+  emailCount: number
+  sourceCount: number
+}
+
 /** Full persisted application state. */
 export interface AppData {
   version: number

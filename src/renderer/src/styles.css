@@ -1753,6 +1753,62 @@ input[type='color'].folder-card-color {
   color: #fca5a5;
 }
 
+/* ---------- News briefing ---------- */
+.briefing {
+  max-width: 780px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.brief-topic {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.brief-topic-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.brief-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.brief-item {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 11px 13px;
+}
+.brief-summary {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.brief-cite {
+  margin-top: 7px;
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  font-size: 12px;
+  padding: 0;
+  text-align: left;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.brief-cite:hover {
+  text-decoration: underline;
+}
+
 /* ---------- Calendar ---------- */
 .calendar {
   max-width: 760px;
