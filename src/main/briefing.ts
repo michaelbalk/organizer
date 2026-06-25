@@ -5,11 +5,14 @@ import { getMessage } from './google/gmail'
 import { generateNewsBriefing } from './anthropic'
 
 const GMAIL_BASE = 'https://gmail.googleapis.com/gmail/v1/users/me'
-const MAX_EMAILS = 25
-const MAX_LINKS = 18
+const MAX_EMAILS = 120
+const MAX_LINKS = 45
 const FETCH_TIMEOUT_MS = 8000
-const EMAIL_TEXT_CHARS = 1200
-const ARTICLE_TEXT_CHARS = 1600
+const EMAIL_TEXT_CHARS = 900
+const ARTICLE_TEXT_CHARS = 1400
+// Target newsletters/news (the Promotions/Updates/Forums tabs) rather than
+// personal/business 1:1 mail, so the briefing has high signal at high volume.
+const NEWS_QUERY = '(category:promotions OR category:updates OR category:forums)'
 const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
 
@@ -27,38 +30,39 @@ export async function buildNewsBriefing(hours = 48): Promise<NewsBriefing> {
     .accounts.filter((a) => a.provider === 'google' && a.connected)
   const days = Math.max(1, Math.ceil(hours / 24))
 
-  // 1. Gather recent inbox emails (full bodies) across accounts.
-  const emails: EmailFull[] = []
+  // 1. Collect recent newsletter message refs across accounts.
+  const refs: { accountId: string; id: string }[] = []
   for (const acc of accounts) {
-    if (emails.length >= MAX_EMAILS) break
     try {
       const client = getAuthorizedClient(acc.id)
+      const q = `newer_than:${days}d ${NEWS_QUERY}`
       const list = await client.request<{ messages?: { id: string }[] }>({
-        url: `${GMAIL_BASE}/messages?q=${encodeURIComponent(`in:inbox newer_than:${days}d`)}&maxResults=${MAX_EMAILS}`
+        url: `${GMAIL_BASE}/messages?q=${encodeURIComponent(q)}&maxResults=${MAX_EMAILS}`
       })
-      for (const ref of list.data.messages ?? []) {
-        if (emails.length >= MAX_EMAILS) break
-        try {
-          emails.push(await getMessage(acc.id, ref.id))
-        } catch {
-          /* skip a message we can't read */
-        }
-      }
+      for (const m of list.data.messages ?? []) refs.push({ accountId: acc.id, id: m.id })
     } catch {
       /* skip an account we can't reach */
     }
   }
 
-  // 2. Extract candidate article links from the emails.
+  // 2. Fetch the full bodies in parallel (one failure drops just that message).
+  const settled = await Promise.allSettled(
+    refs.slice(0, MAX_EMAILS).map((r) => getMessage(r.accountId, r.id))
+  )
+  const emails: EmailFull[] = settled
+    .filter((s): s is PromiseFulfilledResult<EmailFull> => s.status === 'fulfilled')
+    .map((s) => s.value)
+
+  // 3. Extract candidate article links from the emails.
   const candidates = extractLinks(emails).slice(0, MAX_LINKS)
 
-  // 3. Best-effort fetch each link (resolve redirects + pull readable text).
+  // 4. Best-effort fetch each link (resolve redirects + pull readable text).
   const fetched = await Promise.allSettled(candidates.map((c) => fetchArticle(c)))
   const sources: Source[] = fetched
     .map((r, i) => (r.status === 'fulfilled' ? r.value : fallbackSource(candidates[i])))
     .filter((s): s is Source => s !== null)
 
-  // 4. Summarize with Claude.
+  // 5. Summarize with Claude.
   const material = buildMaterial(emails, sources)
   const { topics } = await generateNewsBriefing(material)
 
