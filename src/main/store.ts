@@ -1,8 +1,8 @@
-import { app } from 'electron'
-import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync, renameSync } from 'fs'
 import { join } from 'path'
 import { randomUUID } from 'crypto'
 import { CONTACT_STAGES } from '@shared/types'
+import { dataDir } from './paths'
 import type {
   Account,
   AppData,
@@ -38,9 +38,7 @@ class Store {
   private data: AppData
 
   constructor() {
-    const dir = join(app.getPath('userData'), 'data')
-    if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
-    this.filePath = join(dir, 'organizer.json')
+    this.filePath = join(dataDir(), 'organizer.json')
     this.data = this.load()
   }
 

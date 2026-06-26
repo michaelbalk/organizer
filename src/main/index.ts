@@ -1,3 +1,4 @@
+import './bootstrap' // sets ORGANIZER_DATA_DIR + token encryptor before store/tokenStore load
 import { app, shell, BrowserWindow, Notification } from 'electron'
 import { join } from 'path'
 import { registerIpc } from './ipc'

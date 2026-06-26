@@ -3,7 +3,6 @@ import type { Account } from '@shared/types'
 import { getGoogleConfig } from '../config'
 import { getStore } from '../store'
 import { getTokenStore } from './tokenStore'
-import { runGoogleAuthFlow } from './oauth'
 
 /**
  * Launches the consent flow and links the resulting Google account to a
@@ -14,6 +13,8 @@ export async function connectGoogleAccount(
   workspaceId: string,
   loginHint?: string
 ): Promise<Account> {
+  // Loaded lazily so this module stays importable in a non-Electron (server) context.
+  const { runGoogleAuthFlow } = await import('./oauth')
   const result = await runGoogleAuthFlow(loginHint)
   const store = getStore()
 
