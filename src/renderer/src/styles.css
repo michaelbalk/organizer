@@ -1,17 +1,25 @@
+/* ---------- LCARS theme (Star Trek bridge interface) ---------- */
 :root {
-  --bg: #0f172a;
-  --bg-2: #131c31;
-  --panel: #1a2438;
-  --panel-2: #202c44;
-  --border: #2a3650;
-  --text: #e2e8f0;
-  --text-dim: #94a3b8;
-  --muted: #64748b;
-  --accent: #3b82f6;
-  --accent-hover: #2563eb;
-  --danger: #dc2626;
-  --radius: 10px;
-  --shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+  --bg: #000000;
+  --bg-2: #08080a;
+  --panel: #14101a;
+  --panel-2: #1f1826;
+  --border: #4a3410;
+  --text: #f4ead2;
+  --text-dim: #d8a657;
+  --muted: #9a7a45;
+  --accent: #ff9900;
+  --accent-hover: #ffb340;
+  --danger: #cc5555;
+  --radius: 16px;
+  --shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+  /* LCARS accent palette */
+  --lcars-orange: #ff9900;
+  --lcars-gold: #ffcc66;
+  --lcars-lavender: #cc99cc;
+  --lcars-blue: #99ccff;
+  --lcars-salmon: #ff9c8b;
+  --lcars-mauve: #cc6699;
 }
 
 * {
@@ -2331,4 +2339,118 @@ input[type='color'].folder-card-color {
 .triage-done {
   border: none;
   padding: 24px 10px 6px;
+}
+
+/* ===================== LCARS theme overrides ===================== */
+
+/* Pill buttons, bold uppercase — the LCARS look */
+.btn {
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  font-weight: 700;
+}
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #000;
+}
+.btn-primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+.btn-ghost {
+  border-color: var(--lcars-lavender);
+  color: var(--lcars-lavender);
+}
+.btn-ghost:hover {
+  background: rgba(204, 153, 204, 0.14);
+  color: var(--lcars-lavender);
+}
+
+/* Brand + primary navigation as LCARS blocks */
+.brand-name {
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--accent);
+}
+.brand-mark {
+  color: var(--lcars-gold);
+}
+.nav-view {
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-weight: 700;
+  border-radius: 0 999px 999px 0;
+  margin: 1px 8px 1px 0;
+}
+.nav-view.active {
+  background: var(--accent);
+  color: #000;
+}
+.nav-view:hover {
+  color: var(--lcars-gold);
+}
+.nav-view.active:hover {
+  color: #000;
+}
+
+/* Section + screen headers in amber/gold, uppercase */
+.topbar-title h1 {
+  text-transform: uppercase;
+  letter-spacing: 1.6px;
+  color: var(--accent);
+}
+.modal-head h2,
+.accounts-head h2,
+.cal-title,
+.inbox-count {
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--accent);
+}
+.column-title,
+.folder-rail-head,
+.crm-log-head,
+.cal-day-label {
+  color: var(--lcars-gold);
+}
+
+/* Rounded LCARS chips/labels */
+.chip,
+.pill,
+.prio,
+.ws-chip,
+.crm-stage,
+.cal-task-badge {
+  border-radius: 999px;
+}
+
+/* Amber pill scrollbars */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Workspace-filter rows: active = amber block */
+.nav-item.active {
+  background: var(--accent);
+  color: #000;
+}
+.nav-item.active .count {
+  background: rgba(0, 0, 0, 0.25);
+  color: #000;
+}
+.nav-group-head {
+  color: var(--lcars-mauve);
 }
