@@ -1,4 +1,4 @@
-import { OAuth2Client } from 'google-auth-library'
+import { OAuth2Client, type Credentials } from 'google-auth-library'
 import type { Account } from '@shared/types'
 import { getGoogleConfig } from '../config'
 import { getStore } from '../store'
@@ -16,6 +16,18 @@ export async function connectGoogleAccount(
   // Loaded lazily so this module stays importable in a non-Electron (server) context.
   const { runGoogleAuthFlow } = await import('./oauth')
   const result = await runGoogleAuthFlow(loginHint)
+  return linkGoogleAccount(workspaceId, result)
+}
+
+/**
+ * Persists a freshly-authorized Google account against a workspace and stores its
+ * tokens. Shared by the desktop loopback flow and the cloud redirect flow:
+ * re-connecting a known email refreshes it in place instead of duplicating.
+ */
+export function linkGoogleAccount(
+  workspaceId: string,
+  result: { email: string; name: string; credentials: Credentials }
+): Account {
   const store = getStore()
 
   const existing = store

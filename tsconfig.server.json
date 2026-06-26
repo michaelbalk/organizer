@@ -1,0 +1,24 @@
+{
+  "include": ["server/**/*", "src/main/**/*", "src/shared/**/*"],
+  "exclude": [
+    "src/main/index.ts",
+    "src/main/bootstrap.ts",
+    "src/main/ipc.ts",
+    "src/main/reminders.ts"
+  ],
+  "compilerOptions": {
+    "types": ["node"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["src/shared/*"]
+    }
+  }
+}

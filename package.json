@@ -10,20 +10,27 @@
     "preview": "electron-vite preview",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
-    "typecheck": "npm run typecheck:node && npm run typecheck:web"
+    "typecheck:server": "tsc --noEmit -p tsconfig.server.json",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web && npm run typecheck:server",
+    "build:server": "esbuild server/index.ts --bundle --platform=node --format=cjs --outfile=server/dist/index.cjs --alias:@shared=./src/shared --external:electron --packages=external",
+    "build:web": "vite build --config electron.vite.config.ts --outDir out/web",
+    "start": "node server/dist/index.cjs"
   },
   "devDependencies": {
+    "@types/express": "^4.17.25",
     "@types/node": "^22.10.2",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
     "electron": "^33.3.1",
     "electron-vite": "^2.3.0",
+    "esbuild": "^0.24.2",
     "typescript": "^5.7.2",
     "vite": "^5.4.11"
   },
   "dependencies": {
     "dotenv": "^17.4.2",
+    "express": "^4.22.2",
     "google-auth-library": "^10.7.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
